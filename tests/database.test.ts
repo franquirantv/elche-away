@@ -1,0 +1,164 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { after, test } from "node:test";
+import { count, eq } from "drizzle-orm";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import "../scripts/env";
+import { createDatabase, type Database } from "../src/db/connection";
+import { localDatabaseUrl } from "../src/db/environment";
+import { attendance, clubs, competitions, matches, stadiums } from "../src/db/schema";
+import { findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "../src/db/queries";
+import { fixtureIds, seedSyntheticData } from "../src/db/fixtures";
+import { validateMatch } from "../src/db/validation";
+import { ELCHE_CLUB_ID } from "../src/lib/identity";
+import { availableSlug, slugBase } from "../src/lib/slugs";
+import { matchDate, tripScore } from "../src/lib/trips";
+import { formatLocation } from "../src/lib/geography";
+
+const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+after(() => pool.end());
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+async function rolledBack(run: (tx: Transaction) => Promise<void>) {
+  const rollback = new Error("Test rollback");
+  try {
+    await db.transaction(async (tx) => { await run(tx); throw rollback; });
+  } catch (error) { if (error !== rollback) throw error; }
+}
+
+async function rejectsSql(tx: Transaction, code: string, run: (savepoint: Transaction) => Promise<unknown>) {
+  await assert.rejects(() => tx.transaction(run), (error: unknown) => {
+    const failure = error as { code?: string; cause?: { code?: string } };
+    const actual = failure.cause?.code ?? failure.code;
+    return actual === code || (code === "23503" && actual === "23001");
+  });
+}
+
+test("migrations and synthetic seeding can be repeated without replacing existing records", async () => {
+  const before = await db.select({ total: count() }).from(matches);
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  assert.deepEqual(await db.select({ total: count() }).from(matches), before);
+  await rolledBack(async (tx) => {
+    await tx.update(attendance).set({ notes: "Owner correction survives seed" }).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    await seedSyntheticData(tx);
+    await seedSyntheticData(tx);
+    assert.deepEqual(await tx.select({ total: count() }).from(matches), before);
+    const [personal] = await tx.select().from(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal(personal.notes, "Owner correction survives seed");
+  });
+});
+
+test("public queries exclude unvisited venues and unattended fixtures, and keep repeated venues", async () => {
+  const trips = await listTrips(db);
+  assert.equal(trips.length, 5);
+  assert.equal(trips.filter((trip) => trip.stadiumId === fixtureIds.ground).length, 2);
+  assert.equal(trips.filter((trip) => trip.stadiumId === null).length, 1);
+  assert.ok(trips.every((trip) => trip.factualNotes !== "UNATTENDED_FIXTURE_NOT_PUBLIC"));
+  const stadiumRows = await listVisitedStadiums(db);
+  assert.equal(stadiumRows.length, 2);
+  assert.equal(stadiumRows.find((stadium) => stadium.id === fixtureIds.ground)?.visits, 2);
+  assert.equal(await findVisitedStadium(db, "estadio-no-visitado-ejemplo"), undefined);
+  assert.equal(await findTrip(db, fixtureIds.unattendedMatch), undefined);
+  assert.equal(await findTrip(db, "' OR 1=1 --"), undefined);
+});
+
+test("cup competition is independent of season tier; date chronology places nulls last", async () => {
+  const trips = await listTrips(db);
+  assert.equal(trips[0].competition, "Copa de ejemplo");
+  assert.equal(trips[0].tier, "División de ejemplo");
+  assert.equal(trips[0].isSpecial, true);
+  assert.deepEqual(trips.slice(0, 3).map((trip) => trip.playedOn), ["2030-03-01", "2030-02-01", "2030-01-01"]);
+  assert.ok(trips.slice(3).every((trip) => trip.playedOn === null));
+  assert.deepEqual((await listTrips(db)).map((trip) => trip.slug), trips.map((trip) => trip.slug));
+});
+
+test("PostgreSQL rejects invalid scores, duplicated sides, invalid geography, bad slugs and reference deletion", async () => {
+  await rolledBack(async (tx) => {
+    for (const input of [
+      { awayClubId: ELCHE_CLUB_ID, homeScore: 1 },
+      { awayClubId: ELCHE_CLUB_ID, homeScore: -1, awayScore: 0 },
+      { homeClubId: ELCHE_CLUB_ID, awayClubId: ELCHE_CLUB_ID },
+      { homeScore: 1, awayScore: 0 },
+    ]) await rejectsSql(tx, "23514", (savepoint) => savepoint.insert(matches).values(input));
+    await rejectsSql(tx, "23514", (s) => s.insert(matches).values({ status: "not-a-status" as "unknown" }));
+    for (const input of [{ latitude: 12 }, { latitude: 91, longitude: 12 }, { provinceCode: "99" }]) {
+      await rejectsSql(tx, "23514", (s) => s.insert(stadiums).values({ name: "Example", slug: "example-ground", ...input }));
+    }
+    await rejectsSql(tx, "23514", (s) => s.insert(clubs).values({ name: " ", slug: "blank" }));
+    await rejectsSql(tx, "23514", (s) => s.insert(clubs).values({ name: "Example", slug: "NOT A SLUG" }));
+    await rejectsSql(tx, "23514", (s) => s.insert(clubs).values({ name: "Example", slug: "crest", crestPath: "https://untrusted.example/crest.svg" }));
+    await rejectsSql(tx, "23505", (s) => s.insert(attendance).values({ matchId: fixtureIds.homeMatch, slug: "duplicate-attendance" }));
+    await rejectsSql(tx, "23503", (s) => s.delete(stadiums).where(eq(stadiums.id, fixtureIds.ground)));
+    await rejectsSql(tx, "23503", (s) => s.delete(clubs).where(eq(clubs.id, ELCHE_CLUB_ID)));
+    await rejectsSql(tx, "23503", (s) => s.delete(matches).where(eq(matches.id, fixtureIds.homeMatch)));
+    await rejectsSql(tx, "23503", (s) => s.delete(competitions).where(eq(competitions.id, fixtureIds.cup)));
+  });
+});
+
+test("server write validation requires Elche once, while incomplete fixtures remain valid", () => {
+  assert.throws(() => validateMatch({ homeClubId: fixtureIds.north, awayClubId: fixtureIds.south }));
+  assert.throws(() => validateMatch({ homeClubId: ELCHE_CLUB_ID, awayClubId: ELCHE_CLUB_ID }));
+  assert.throws(() => validateMatch({ homeScore: 1, awayScore: 0 }));
+  assert.doesNotThrow(() => validateMatch({}));
+  assert.doesNotThrow(() => validateMatch({ awayClubId: ELCHE_CLUB_ID }));
+  assert.doesNotThrow(() => validateMatch({ homeClubId: ELCHE_CLUB_ID, homeScore: 1, awayScore: 0 }));
+});
+
+test("slugs resolve collisions, stay bounded and survive fixture/name corrections", async () => {
+  await rolledBack(async (tx) => {
+    const label = "Club Norte (ejemplo)";
+    const slug = await availableSlug(label, async (candidate) => (await tx.select().from(clubs).where(eq(clubs.slug, candidate))).length > 0);
+    assert.equal(slug, "club-norte-ejemplo-2");
+    await tx.insert(clubs).values({ id: randomUUID(), name: label, slug });
+    await rejectsSql(tx, "23505", (s) => s.insert(clubs).values({ name: "Another club", slug }));
+    let collision = true;
+    assert.ok((await availableSlug("á".repeat(200), async () => { const exists = collision; collision = false; return exists; })).length <= 160);
+    assert.equal(slugBase("Árbol / Estadio"), "arbol-estadio");
+    const [prior] = await tx.select().from(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    await tx.update(matches).set({ playedOn: "2030-03-02", factsLocked: true }).where(eq(matches.id, fixtureIds.homeMatch));
+    await tx.update(clubs).set({ name: "Renamed synthetic opponent" }).where(eq(clubs.id, fixtureIds.south));
+    const corrected = await findTrip(tx, prior.slug);
+    assert.equal(corrected?.slug, prior.slug);
+    assert.equal(corrected?.awayName, "Renamed synthetic opponent");
+  });
+});
+
+test("unmarking attendance hides the trip while preserving the fixture", async () => {
+  await rolledBack(async (tx) => {
+    const [prior] = await tx.select().from(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal(await findTrip(tx, prior.slug), undefined);
+    const [fixture] = await tx.select().from(matches).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.ok(fixture);
+  });
+});
+
+test("unknown/unfinished scores and dates are displayed honestly, including islands and autonomous cities", () => {
+  assert.equal(tripScore({ status: "finished", homeScore: null, awayScore: null }), "Resultado desconocido");
+  assert.equal(tripScore({ status: "scheduled", homeScore: 0, awayScore: 0 }), "Resultado desconocido");
+  assert.equal(tripScore({ status: "finished", homeScore: 0, awayScore: 0 }), "0 – 0");
+  assert.equal(matchDate(null), "Fecha desconocida");
+  assert.equal(matchDate("2030-01-01"), "1 de enero de 2030");
+  assert.equal(formatLocation(null, null), "Ubicación desconocida");
+  assert.match(formatLocation(null, "35"), /Canarias/);
+  assert.match(formatLocation(null, "51"), /Ceuta/);
+  assert.match(formatLocation(null, "52"), /Melilla/);
+});
+
+
+test("local database commands reject production mode and shared development/testing targets", () => {
+  const environment: Record<string, string | undefined> = process.env;
+  const mode = environment.NODE_ENV;
+  const originalTest = environment.TEST_DATABASE_URL;
+  try {
+    environment.NODE_ENV = "production";
+    assert.throws(() => localDatabaseUrl("testing"), /cannot run in production/);
+    environment.NODE_ENV = mode;
+    if (mode === undefined) delete environment.NODE_ENV;
+    environment.TEST_DATABASE_URL = environment.DATABASE_URL_UNPOOLED;
+    assert.throws(() => localDatabaseUrl("testing"), /separate database/);
+  } finally {
+    if (mode === undefined) delete environment.NODE_ENV; else environment.NODE_ENV = mode;
+    if (originalTest === undefined) delete environment.TEST_DATABASE_URL; else environment.TEST_DATABASE_URL = originalTest;
+  }
+});

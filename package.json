@@ -1,0 +1,44 @@
+{
+  "name": "elche-away",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "npm run db:migrate:test && npm run db:seed:test && tsx --test --test-concurrency=1 tests/*.test.ts",
+    "build": "next build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/database.ts migrate development",
+    "db:seed": "tsx scripts/database.ts seed development",
+    "db:migrate:test": "tsx scripts/database.ts migrate testing",
+    "db:seed:test": "tsx scripts/database.ts seed testing"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "next": "^16.4.2",
+    "pg": "^8.23.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@next/env": "^16.4.2",
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.2",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.0.0"
+  }
+}

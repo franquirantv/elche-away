@@ -1,1 +1,140 @@
-# elche-away
+# Elche Away
+
+**Donde tú vayas.** Archivo personal de viajes y estadios siguiendo al Elche CF. No es un producto oficial del club.
+
+## Stack instalado
+
+Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
+
+PostgreSQL es la única fuente persistente. No hay autenticación, admin, importación/API de fútbol, fotos ni mapa interactivo todavía. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+
+## Requisitos
+
+- Node.js 22 recomendado (`.nvmrc`); versiones compatibles en `package.json`.
+- npm 10 o posterior y Git.
+- Un proyecto Neon exclusivamente no productivo con dos ramas: `development` y `testing`. Testing debe ser desechable. También sirve PostgreSQL local con dos bases distintas (sin instalarlo como parte del proyecto).
+
+Con nvm: `nvm install` y `nvm use` dentro del repositorio. No necesitas CLI Neon, Docker ni una clave API de Neon para usar cadenas de conexión ya disponibles.
+
+## Instalación desde un clon limpio
+
+```sh
+git clone https://github.com/franquirantv/elche-away.git
+cd elche-away
+npm ci
+cp .env.example .env.local
+```
+
+Rellena `.env.local` antes de continuar. Si ya existe, conserva su contenido en lugar de reemplazarlo. Al actualizar dependencias intencionadamente, usa npm y conserva el lockfile.
+
+## Preparar PostgreSQL y variables de entorno
+
+1. En la consola Neon, crea o reutiliza un proyecto **no productivo**, por ejemplo `elche-away-development`. Habilita solo PostgreSQL; no conectes Vercel ni otros servicios.
+2. Nombra la rama inicial `development`. Si Neon la llama `production`, renómbrala en este proyecto nuevo: no es nuestro entorno de producción.
+3. Crea `testing` desde `development` mientras todavía está vacía. Las ramas tienen endpoints independientes; las migraciones posteriores se aplican explícitamente a cada una. No uses una rama derivada de datos reales.
+4. En **Connect**, copia las conexiones completas con sus parámetros SSL, seleccionando la rama correcta para cada variable:
+
+| Variable | Destino | Tipo y uso |
+| --- | --- | --- |
+| `DATABASE_URL` | development | Pooled (`-pooler`): aplicación local. |
+| `DATABASE_URL_UNPOOLED` | development | Directa: migraciones y seed. Debe apuntar a la misma base que la anterior. |
+| `TEST_DATABASE_URL` | testing | Directa: pruebas; debe apuntar a otra rama/base. |
+
+Los scripts leen `.env.local` como Next.js; las variables ya definidas en el proceso tienen prioridad (CI). El driver mantiene explícitamente verificación TLS completa para las conexiones Neon con `sslmode=require`. No uses conexiones de producción. Las cadenas no se imprimen en los scripts ni deben compartirse por chat.
+
+`.env.local` está ignorado por Git. Compruébalo con `git check-ignore .env.local`; solo `.env.example`, sin valores, se versiona. Ninguna variable de base de datos lleva el prefijo `NEXT_PUBLIC_`.
+
+## Migraciones y datos sintéticos
+
+Primero verifica la migración en testing y carga sus ejemplos:
+
+```sh
+npm run db:migrate:test
+npm run db:seed:test
+npm test
+```
+
+Después prepara desarrollo:
+
+```sh
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+Los scripts seleccionan su destino explícitamente; comprueban separación de testing y coherencia de las conexiones de desarrollo y se niegan a escribir con `NODE_ENV=production` o en Vercel. Esta comprobación no puede demostrar a qué entorno pertenece una credencial: tú debes configurar exclusivamente las ramas no productivas.
+
+La migración inicial crea siete tablas y el registro de migraciones Drizzle. No borra tablas ni se ejecuta durante un request/build. Repetir el comando no reaplica migraciones ya registradas. Antes de cambiar el esquema, ejecuta `npm run db:generate`, revisa el SQL y prueba la actualización en testing; nunca uses schema push.
+
+El seed es transaccional e idempotente: añade ejemplos ausentes con IDs estables, no elimina datos ni sobrescribe correcciones existentes. Incluye seis partidos ficticios, cinco asistencias, dos estadios visitados (uno con dos visitas), otro no visitado, liga/copa de ejemplo, división por temporada y datos incompletos. El único club real de referencia es Elche CF; todos los encuentros, rivales y estadios del seed son inventados. Los archivos TypeScript de fixtures solo son entrada para cargar PostgreSQL, nunca la persistencia ni la fuente de las páginas.
+
+No hay comando de reset automático. No ejecutes semillas contra datos reales. Si alteras los fixtures de testing, las pruebas pueden fallar por esas diferencias; usa una base de testing nueva y vacía para recuperar un punto de partida limpio, sin borrar desarrollo.
+
+## Desarrollo local y acceso
+
+```sh
+npm run dev
+```
+
+Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muestre Next.js. Detén el servidor con `Ctrl+C`. Las páginas del archivo leen PostgreSQL en cada petición; una corrección aparece sin reconstruir la aplicación.
+
+| Ruta | Contenido |
+| --- | --- |
+| `/` | Shell de inicio; los totales se incorporarán en un milestone posterior. |
+| `/trips` | Cronología de asistencias, con fechas desconocidas al final. |
+| `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
+| `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
+| `/stadiums/[slug]` | Información y viajes asociados al estadio visitado. |
+| `/map` | Estado de próxima disponibilidad, sin mapa interactivo. |
+
+Abre los detalles desde los enlaces de las listas: `[slug]` es un parámetro, no una URL literal. El seed ofrece `/stadiums/estadio-del-corcho-ejemplo` y un viaje de información incompleta en `/trips/viaje`. Los nombres/fechas corregidos no regeneran slugs. Un estadio no visitado o un viaje inexistente no es público; muestra 404.
+
+Si la base está vacía, las listas muestran estados vacíos. Si falta configuración, la base no está migrada o PostgreSQL falla, se muestra un error genérico con opción de reintentar: no se inventan datos ni se presentan fallos como un archivo vacío.
+
+## Scripts y pruebas
+
+| Comando | Función |
+| --- | --- |
+| `npm run dev` | Desarrollo con recarga automática. |
+| `npm run lint` | ESLint, incluidas advertencias como errores. |
+| `npm run typecheck` | Tipos de rutas Next.js y TypeScript sin emitir código. |
+| `npm test` | Migra y carga datos sintéticos en testing; ejecuta integración PostgreSQL y HTTP. |
+| `npm run build` | Compilación de producción; no ejecuta migraciones ni consulta la base. |
+| `npm start` | Sirve el build local; necesita configuración de base para consultar el archivo. |
+| `npm run db:generate` | Genera migración SQL/snapshot Drizzle sin conectarse a una base. |
+| `npm run db:migrate` / `npm run db:seed` | Migra / carga ejemplos en development. |
+| `npm run db:migrate:test` / `npm run db:seed:test` | Migra / carga ejemplos en testing. |
+
+`npm test` nunca usa development para consultar ni modificar registros. Sus tests SQL usan transacciones/savepoints con rollback; las pruebas HTTP arrancan su servidor con `DATABASE_URL` reemplazada por testing y restauran la corrección sintética usada para verificar lecturas frescas. No se borran ni reinician bases automáticamente. El servidor HTTP de pruebas usa un puerto libre y su propia salida `.next-test/`, sin reutilizar el servidor ni las credenciales de desarrollo. Ejecuta una sola suite a la vez sobre la rama testing compartida. La variable interna `ARCHIVE_TEST_SERVER` se configura automáticamente en el runner; no la añadas a `.env.local`.
+
+Se verifican restricciones, nulos, sedes repetidas, separación asistencia/partido, competición/división, orden de fechas, correcciones y slugs, páginas y exclusión de fixtures no asistidos. Revisa también foco y presentación móvil/escritorio al cambiar UI.
+
+La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de prueba; no requiere secretos Neon ni accede a tus ramas. Ejecuta npm ci, lint, tipos, tests y build en push/PR, sin despliegue.
+
+Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aunque npm avisa que esa rama ya no tiene soporte. Revisa los avisos de `npm audit` al actualizar tooling; no apliques `npm audit fix --force` sin evaluar los cambios.
+
+## Estructura
+
+- `src/app/`: layout, estilos y rutas públicas de lectura.
+- `src/components/`: navegación, estado vacío y lista de viajes.
+- `src/db/`: esquema Drizzle, conexión, consultas públicas y entrada de fixtures sintéticos.
+- `src/lib/`: identidad estable de Elche, formato, geografía y slugs.
+- `drizzle/`: migraciones SQL y metadatos generados; estos JSON describen el esquema, no almacenan partidos.
+- `scripts/`: comandos locales explícitos de base de datos.
+- `tests/`: integración PostgreSQL y HTTP.
+- `.github/workflows/`: CI; `.agents/skills/`: workflows para agentes.
+
+## Documentación interna
+
+- [AGENTS.md](AGENTS.md): reglas recurrentes, comunicación y verificaciones.
+- [PRODUCT.md](docs/PRODUCT.md): vocabulario, alcance y reglas.
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md): límites de aplicación e integraciones.
+- [DATABASE.md](docs/DATABASE.md): modelo, restricciones y migraciones.
+- [DESIGN.md](docs/DESIGN.md): dirección visual/UX.
+- [ROADMAP.md](docs/ROADMAP.md): milestones y límite del MVP.
+
+## Estado del proyecto
+
+**Milestone 2 — archivo local con datos completado.** El siguiente es Milestone 3: acceso del propietario y edición de referencias. No se ha iniciado; tampoco se han implementado importaciones, fotos ni el mapa interactivo.
+
+Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
