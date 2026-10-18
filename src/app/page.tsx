@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getHomeSummary } from "@/db/public-archive";
 
 const sections = [
   { href: "/trips", number: "01", title: "Los viajes", description: "Cada partido fuera de casa, un recuerdo que guardar." },
@@ -6,7 +7,8 @@ const sections = [
   { href: "/map", number: "03", title: "El mapa", description: "Un lugar para cada chincheta. Una historia detrás." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const summary = await getHomeSummary();
   return (
     <div className="page-content">
       <section className="hero" aria-labelledby="home-title">
@@ -22,6 +24,25 @@ export default function HomePage() {
           <p className="card-motto">Siempre contigo.<br /><span>También lejos de casa.</span></p>
           <span className="card-bottomline">FÚTBOL · CARRETERA · MEMORIA</span>
         </div>
+      </section>
+      <section className="archive-section" aria-labelledby="summary-title">
+        <div className="section-heading">
+          <h2 id="summary-title">El archivo en cifras</h2>
+          {summary.trips === 0 && <p>Todavía no hay viajes registrados. Aquí irá creciendo la historia.</p>}
+        </div>
+        <dl className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          {[
+            ["Viajes", summary.trips], ["Estadios conocidos", summary.stadiums],
+            ["Victorias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses],
+          ].map(([label, value]) => (
+            <div className="rounded-xl border border-stone-200 p-4" key={label}>
+              <dt>{label}</dt><dd className="mt-2 text-3xl font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-4">Resultados conocidos de partidos finalizados: {summary.knownResults} de {summary.trips} viajes.</p>
+        <p>Estadio conocido: {summary.knownVenues} de {summary.trips} viajes.</p>
+        <p>Victorias, empates y derrotas según los goles jugados, incluida la prórroga y sin contar la tanda de penaltis.</p>
       </section>
       <section className="archive-section" aria-labelledby="archive-title">
         <div className="section-heading">

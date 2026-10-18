@@ -223,7 +223,7 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 
 | Ruta | Contenido |
 | --- | --- |
-| `/` | Shell de inicio; los totales se incorporarán en un milestone posterior. |
+| `/` | Resumen de viajes, estadios conocidos y victorias/empates/derrotas, derivado de asistencias en PostgreSQL en cada petición, con cobertura de resultados y estadios. |
 | `/trips` | Cronología de asistencias, con fechas desconocidas al final. |
 | `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
@@ -246,14 +246,18 @@ Si la base está vacía, las listas muestran estados vacíos. Si falta configura
 | `npm run dev:testing` | QA manual con la base/Auth/identidad de testing en localhost:3001. |
 | `npm run lint` | ESLint, incluidas advertencias como errores. |
 | `npm run typecheck` | Tipos de rutas Next.js y TypeScript sin emitir código. |
-| `npm test` | Migra y carga datos sintéticos en testing; ejecuta integración PostgreSQL y HTTP. |
+| `npm test` | Crea una base temporal en el servidor de testing, migra/siembra y ejecuta integración PostgreSQL y HTTP; elimina solo esa base al finalizar. |
 | `npm run build` | Compilación de producción; no ejecuta migraciones ni consulta la base. |
 | `npm start` | Sirve el build local; necesita configuración de base para consultar el archivo. |
 | `npm run db:generate` | Genera migración SQL/snapshot Drizzle sin conectarse a una base. |
 | `npm run db:migrate` / `npm run db:seed` | Migra / carga ejemplos en development. |
 | `npm run db:migrate:test` / `npm run db:seed:test` | Migra / carga ejemplos en testing. |
 
-`npm test` nunca usa development para consultar ni modificar registros. Sus tests SQL usan transacciones/savepoints con rollback; las pruebas HTTP arrancan su servidor con `DATABASE_URL` reemplazada por testing y restauran la corrección sintética usada para verificar lecturas frescas. No se borran ni reinician bases automáticamente. El servidor HTTP de pruebas usa un puerto libre y su propia salida `.next-test/`, sin reutilizar el servidor ni las credenciales de desarrollo. Para Auth levanta un upstream de loopback con sesiones sintéticas; ejercita el SDK, middleware y Server Actions reales sin tocar usuarios de Google/Neon Auth. Ningún bypass de login está disponible en la aplicación. Ejecuta una sola suite a la vez sobre la rama testing compartida. La variable interna `ARCHIVE_TEST_SERVER` se configura automáticamente en el runner y en `dev:testing`; no la añadas a `.env.local`.
+`npm test` valida que development y testing sean distintos y crea una base nueva con nombre aleatorio `elche_away_test_<uuid>` en el servidor de `TEST_DATABASE_URL`. Requiere permiso PostgreSQL `CREATEDB` en ese servidor (también en CI). Aplica las migraciones reales sin transformarlas, carga el seed y pasa la conexión temporal a toda la suite, incluido el servidor HTTP. No migra, siembra, vacía ni borra la base configurada en `TEST_DATABASE_URL`; sus datos previos no intervienen. Los tests SQL conservan sus transacciones/savepoints con rollback. Al terminar, incluso con pruebas fallidas o SIGINT/SIGTERM, el runner cierra conexiones y elimina exclusivamente la base cuya creación ha confirmado en esa ejecución. No reutiliza ni elimina bases preexistentes. Ante un cierre forzado del proceso (SIGKILL), fallo de red o falta de permisos de limpieza, puede quedar una base temporal: el runner imprime su nombre al crearla; elimina manualmente solo ese nombre en el servidor de testing, nunca las bases configuradas. Si no puede crear la base, falla sin ejecutar las pruebas contra los datos del propietario.
+
+El servidor HTTP de pruebas usa un puerto libre y su propia salida `.next-test/`, sin reutilizar el servidor ni las credenciales de desarrollo. Para Auth levanta un upstream de loopback con sesiones sintéticas; ejercita el SDK, middleware y Server Actions reales sin tocar usuarios de Google/Neon Auth. Ningún bypass de login está disponible en la aplicación. Ejecuta una sola suite a la vez para no compartir la salida `.next-test/`. La variable interna `ARCHIVE_TEST_SERVER` se configura automáticamente en las pruebas y en `dev:testing`; no la añadas a `.env.local`.
+
+En este entorno, Turbopack falló al compilar `src/app/globals.css` al crear un proceso que necesitaba abrir un puerto (`Operation not permitted`, error 1). Si aparece esa restricción, verifica el build con `npm run build -- --webpack`: es el bundler alternativo oficial incluido en Next.js. Mantiene el build de producción, comprobación de tipos y generación de rutas; no cambia la arquitectura ni el comando predeterminado. Usa la versión de Node indicada por `.nvmrc` (`nvm use`); Node 20 no satisface los requisitos del proyecto.
 
 Se verifican restricciones, nulos, sedes repetidas, separación asistencia/partido, competición/división, orden de fechas, correcciones y slugs, páginas y exclusión de fixtures no asistidos. Revisa también foco y presentación móvil/escritorio al cambiar UI.
 
@@ -289,6 +293,14 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4c completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. 4d no se ha iniciado.
+Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 sigue pendiente.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
+
+## Aceptación manual de 4d
+
+En desarrollo o testing (nunca producción), abre `/` en móvil y escritorio y contrasta el resumen con `/trips` y `/stadiums`. Con el seed sintético sin modificaciones, deben aparecer 5 viajes, 2 estadios, 1 victoria, 1 empate y 0 derrotas; cobertura de resultados 2/5 y de estadios 4/5.
+
+Desde `/admin`, marca y desmarca una asistencia y recarga el inicio: los totales deben reflejarla sin borrar el partido. Dos visitas al mismo estadio cuentan como dos viajes y un estadio. Un viaje sin estadio cuenta solo en viajes. Comprueba un resultado finalizado como local y como visitante; un 0–0 finalizado es empate. Cambia el estado a programado, aplazado, cancelado, abandonado o desconocido: el marcador deja de contribuir. Un finalizado sin marcador tampoco aporta resultado. Las tandas no cambian el empate de los goles jugados. Sin asistencias deben mostrarse ceros y el mensaje de archivo vacío. Restaura los datos de prueba al terminar.
+
+Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correctos; dos ejecuciones consecutivas de `npm test` con 53/53 pruebas, sin omisiones y con limpieza de sus bases temporales; build de producción correcto mediante `npm run build -- --webpack`. Las huellas de las nueve tablas existentes de testing permanecieron idénticas. El comportamiento funcional aceptado no se modificó.
