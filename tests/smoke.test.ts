@@ -328,3 +328,72 @@ test("fixture browser and actual fixture actions enforce owner authorization and
     await pool.end();
   }
 });
+
+test("import page and all upload/preview/apply actions authorize independently; owner reviews before writing", async () => {
+  const { matchSources } = await import("../src/db/schema");
+  const { digest } = await import("../src/server/import-input");
+  const { ELCHE_CLUB_ID } = await import("../src/lib/identity");
+  const { encodeReply, createFromReadableStream } = createRequire(import.meta.url)("next/dist/compiled/react-server-dom-turbopack/client.node") as {
+    encodeReply: (value: unknown[]) => Promise<string | FormData>;
+    createFromReadableStream: (stream: ReadableStream<Uint8Array>, options: { serverConsumerManifest: { moduleMap: object; serverModuleMap: object; moduleLoading: null } }) => Promise<{ a?: Promise<{ message: string; token?: string; input?: unknown }> }>;
+  };
+  const page = await fetch(`${origin}/admin/import`, { headers: { Cookie: identity.ownerCookie } });
+  assert.match(await page.text(), /Importar partidos/);
+  assert.match(await (await fetch(`${origin}/admin/import`, { headers: { Cookie: identity.otherCookie } })).text(), /Acceso restringido/);
+  const action = await actionId("importFixtures");
+  async function submit(form: FormData, cookie: string) {
+    const response = await fetch(`${origin}/admin/import`, { method: "POST", redirect: "manual", headers: { "Next-Action": action, Origin: origin, Cookie: cookie }, body: await encodeReply([form]) });
+    const text = await response.text();
+    // React may encode a long signed token as a separate text chunk. Decode
+    // the real Flight protocol instead of treating each line as plain JSON.
+    let state;
+    if (text.includes('"token"')) {
+      const stream = new Response(text).body!;
+      const root = await createFromReadableStream(stream, { serverConsumerManifest: { moduleMap: {}, serverModuleMap: {}, moduleLoading: null } });
+      state = await root.a;
+    }
+    return { text, state };
+  }
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const path = `2037-38/http-${randomUUID()}.json`;
+  try {
+    const beforeMatches = await db.select().from(matches).orderBy(matches.id);
+    const beforeSources = await db.select().from(matchSources).orderBy(matchSources.id);
+    for (const cookie of ["", identity.otherCookie]) {
+      for (const intent of ["inspect", "preview", "apply"]) {
+        const form = new FormData(); form.set("intent", intent); form.set("userId", identity.ownerId);
+        const result = await submit(form, cookie);
+        assert.match(result.text, /No tienes permiso|auth\/sign-in/);
+      }
+    }
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), beforeMatches);
+    assert.deepEqual(await db.select().from(matchSources).orderBy(matchSources.id), beforeSources);
+    const record = { date: "2037-10-15", team1: "Elche CF", team2: "Rival HTTP sintético", score: { ft: [2, 1] } };
+    const input = { repository: "openfootball/football.json", path, revision: "d".repeat(40), content: JSON.stringify([record]), format: "json", seasonId: fixtureIds.season, competitionId: fixtureIds.league, elcheName: "Elche CF", offset: 0, resultsConfirmed: true, mappings: {}, targets: {} };
+    const upload = new FormData();
+    for (const [key, value] of Object.entries(input)) if (!["content", "mappings", "targets", "resultsConfirmed"].includes(key)) upload.set(key, String(value));
+    upload.set("resultsConfirmed", "yes"); upload.set("intent", "inspect"); upload.set("file", new File([input.content], "synthetic.json", { type: "application/json" }));
+    const inspected = await submit(upload, identity.ownerCookie);
+    assert.match(inspected.text, /Archivo leído sin guardar/);
+    const form = new FormData(); form.set("intent", "preview"); form.set("input", JSON.stringify(input));
+    form.set("club-0", ELCHE_CLUB_ID); form.set("club-1", fixtureIds.north); form.set("target-0", "new");
+    const reviewed = await submit(form, identity.ownerCookie);
+    assert.ok(reviewed.state?.token, reviewed.text.slice(-1500));
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), beforeMatches);
+    const apply = new FormData(); apply.set("intent", "apply"); apply.set("confirmApply", "yes"); apply.set("token", reviewed.state.token + "tamper");
+    assert.match((await submit(apply, identity.ownerCookie)).text, /modificado/);
+    apply.set("token", reviewed.state.token);
+    assert.match((await submit(apply, identity.otherCookie)).text, /No tienes permiso/);
+    assert.match((await submit(apply, identity.ownerCookie)).text, /Lote aplicado: 1 nuevos/);
+    const sources = await db.select().from(matchSources).where(eq(matchSources.path, path));
+    assert.equal(sources.length, 1);
+    assert.equal(sources[0].fingerprint, digest({ home: record.team1, away: record.team2, playedOn: record.date, homeScore: 2, awayScore: 1, phase: null }));
+    const publicTrips = await listTrips(db);
+    assert.ok(publicTrips.every((trip) => trip.playedOn !== record.date));
+  } finally {
+    const sources = await db.select().from(matchSources).where(eq(matchSources.path, path));
+    await db.delete(matchSources).where(eq(matchSources.path, path));
+    for (const source of sources) await db.delete(matches).where(eq(matches.id, source.matchId));
+    await pool.end();
+  }
+});

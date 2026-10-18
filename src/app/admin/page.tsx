@@ -25,6 +25,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const kind: ReferenceKind = referenceKinds.includes(section as ReferenceKind) ? section as ReferenceKind : "clubs";
   return <div className="page-content">
     <header className="page-heading"><p className="eyebrow">Área privada</p><h1>Administración</h1><p className="lead">Gestiona los partidos locales, tus asistencias y las referencias del archivo.</p><Link href="/auth/account" className="text-link">Mi sesión y cierre de sesión</Link></header>
+    <p><Link href="/admin/import" className="text-link">Importar archivo de OpenFootball</Link></p>
     <nav className="admin-tabs" aria-label="Administración"><Link href="/admin" aria-current={!section || section === "fixtures" ? "page" : undefined}>Partidos</Link>{referenceKinds.map((item) => <Link key={item} href={`/admin?section=${item}`} aria-current={section === item ? "page" : undefined}>{labels[item]}</Link>)}</nav>
     {!section || section === "fixtures" ? <FixtureBrowser references={references} filters={params} /> : <>
     <h2 className="group-title">{labels[kind]}</h2>
