@@ -3,6 +3,8 @@ import { alias } from "drizzle-orm/pg-core";
 import type { QueryDatabase } from "./connection";
 import { attendance, clubs, competitions, matches, seasons, stadiums, tiers } from "./schema";
 
+import { ELCHE_CLUB_ID } from "../lib/identity";
+
 const home = alias(clubs, "home_club");
 const away = alias(clubs, "away_club");
 
@@ -56,3 +58,20 @@ export async function findVisitedStadium(db: QueryDatabase, slug: string) {
 }
 
 export type PublicTrip = Awaited<ReturnType<typeof listTrips>>[number];
+
+// Aggregate only attended local fixtures; unknowns never become results or venues.
+export async function readHomeSummary(db: QueryDatabase) {
+  const elcheScore = sql`case when ${matches.homeClubId} = ${ELCHE_CLUB_ID} then ${matches.homeScore} when ${matches.awayClubId} = ${ELCHE_CLUB_ID} then ${matches.awayScore} end`;
+  const opponentScore = sql`case when ${matches.homeClubId} = ${ELCHE_CLUB_ID} then ${matches.awayScore} when ${matches.awayClubId} = ${ELCHE_CLUB_ID} then ${matches.homeScore} end`;
+  const completed = sql`${matches.status} = 'finished' and ${elcheScore} is not null and ${opponentScore} is not null`;
+  const [summary] = await db.select({
+    trips: sql<number>`count(*)::integer`,
+    stadiums: sql<number>`count(distinct ${matches.stadiumId})::integer`,
+    knownVenues: sql<number>`count(${matches.stadiumId})::integer`,
+    knownResults: sql<number>`count(*) filter (where ${completed})::integer`,
+    wins: sql<number>`count(*) filter (where ${completed} and ${elcheScore} > ${opponentScore})::integer`,
+    draws: sql<number>`count(*) filter (where ${completed} and ${elcheScore} = ${opponentScore})::integer`,
+    losses: sql<number>`count(*) filter (where ${completed} and ${elcheScore} < ${opponentScore})::integer`,
+  }).from(attendance).innerJoin(matches, eq(attendance.matchId, matches.id));
+  return summary;
+}

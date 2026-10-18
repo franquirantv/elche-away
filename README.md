@@ -223,7 +223,7 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 
 | Ruta | Contenido |
 | --- | --- |
-| `/` | Shell de inicio; los totales se incorporarán en un milestone posterior. |
+| `/` | Resumen de viajes, estadios conocidos y victorias/empates/derrotas, derivado de asistencias en PostgreSQL en cada petición, con cobertura de resultados y estadios. |
 | `/trips` | Cronología de asistencias, con fechas desconocidas al final. |
 | `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
@@ -289,6 +289,12 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4c completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. 4d no se ha iniciado.
+Milestones 1–4c completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. 4d implementado en rama para revisión y aceptación manual; todavía no aceptado.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
+
+## Aceptación manual de 4d
+
+En desarrollo o testing (nunca producción), abre `/` en móvil y escritorio y contrasta el resumen con `/trips` y `/stadiums`. Con el seed sintético sin modificaciones, deben aparecer 5 viajes, 2 estadios, 1 victoria, 1 empate y 0 derrotas; cobertura de resultados 2/5 y de estadios 4/5.
+
+Desde `/admin`, marca y desmarca una asistencia y recarga el inicio: los totales deben reflejarla sin borrar el partido. Dos visitas al mismo estadio cuentan como dos viajes y un estadio. Un viaje sin estadio cuenta solo en viajes. Comprueba un resultado finalizado como local y como visitante; un 0–0 finalizado es empate. Cambia el estado a programado, aplazado, cancelado, abandonado o desconocido: el marcador deja de contribuir. Un finalizado sin marcador tampoco aporta resultado. Las tandas no cambian el empate de los goles jugados. Sin asistencias deben mostrarse ceros y el mensaje de archivo vacío. Restaura los datos de prueba al terminar.

@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import "../scripts/env";
 import { localDatabaseUrl } from "../src/db/environment";
 import { createDatabase } from "../src/db/connection";
-import { findTrip, listTrips } from "../src/db/queries";
+import { readHomeSummary, findTrip, listTrips } from "../src/db/queries";
 import { fixtureIds } from "../src/db/fixtures";
 import { eq } from "drizzle-orm";
 import { matches, clubs } from "../src/db/schema";
@@ -453,4 +453,19 @@ test("direct-import actions require owner access before acquisition, and signed 
     for (const ref of createdRefs) { const table = { clubs, seasons, competitions }[ref.kind]; await db.delete(table).where(eq(table.id, ref.id)); }
     await pool.end();
   }
+});
+
+test("home renders attendance totals and explicit result and venue coverage", async () => {
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  try {
+    const summary = await readHomeSummary(db);
+    const html = (await (await fetch(origin)).text()).replace(/<!-- -->/g, "");
+    assert.match(html, /El archivo en cifras/);
+    for (const [label, value] of [["Viajes", summary.trips], ["Estadios conocidos", summary.stadiums], ["Victorias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses]]) {
+      assert.ok(html.includes(`<dt>${label}</dt><dd class="mt-2 text-3xl font-semibold">${value}</dd>`));
+    }
+    assert.ok(html.includes(`Resultados conocidos de partidos finalizados: ${summary.knownResults} de ${summary.trips} viajes`));
+    assert.ok(html.includes(`Estadio conocido: ${summary.knownVenues} de ${summary.trips} viajes`));
+    assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
+  } finally { await pool.end(); }
 });

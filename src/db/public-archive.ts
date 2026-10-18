@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { getDatabase } from "./client";
-import { findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "./queries";
+import { readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "./queries";
 
 // Request-time reads only: no build-time DB dependency or persistent data cache.
 export async function getTrips(stadiumId?: string) {
@@ -26,4 +26,10 @@ export async function getVisitedStadium(slug: string) {
   await connection();
   try { return await findVisitedStadium(getDatabase(), slug); }
   catch { throw new Error("No se pudo consultar el estadio."); }
+}
+
+export async function getHomeSummary() {
+  await connection();
+  try { return await readHomeSummary(getDatabase()); }
+  catch { throw new Error("No se pudo consultar el resumen del archivo."); }
 }

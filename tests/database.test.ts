@@ -7,7 +7,7 @@ import "../scripts/env";
 import { createDatabase, type Database } from "../src/db/connection";
 import { localDatabaseUrl } from "../src/db/environment";
 import { attendance, clubs, competitions, matches, stadiums } from "../src/db/schema";
-import { findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "../src/db/queries";
+import { readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "../src/db/queries";
 import { fixtureIds, seedSyntheticData } from "../src/db/fixtures";
 import { validateMatch } from "../src/db/validation";
 import { ELCHE_CLUB_ID } from "../src/lib/identity";
@@ -242,5 +242,36 @@ test("fixture management filters locally, locks corrections and isolates attenda
       await assert.rejects(() => writeFixture(tx, input(bad)));
     }
     await writeFixture(tx, input({ factualNotes: "Unknown synthetic designation", confirmDuplicate: "yes" }));
+  });
+});
+
+test("home summary derives totals, coverage and oriented finished results only from attendance", async () => {
+  await rolledBack(async (tx) => {
+    // Isolate attendance without removing any owner data outside this rollback.
+    await tx.delete(attendance);
+    await seedSyntheticData(tx);
+    assert.deepEqual(await readHomeSummary(tx), { trips: 5, stadiums: 2, knownVenues: 4, knownResults: 2, wins: 1, draws: 1, losses: 0 });
+    for (const status of ["unknown", "scheduled", "postponed", "cancelled", "abandoned"] as const) {
+      await tx.update(matches).set({ status, homeScore: 0, awayScore: 0 }).where(eq(matches.id, fixtureIds.homeMatch));
+      assert.equal((await readHomeSummary(tx)).knownResults, 1);
+    }
+    await tx.update(matches).set({ status: "finished", homeScore: null, awayScore: null }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await readHomeSummary(tx)).knownResults, 1);
+    for (const homeClubId of [ELCHE_CLUB_ID, fixtureIds.south]) {
+      const awayClubId = homeClubId === ELCHE_CLUB_ID ? fixtureIds.south : ELCHE_CLUB_ID;
+      for (const [homeScore, awayScore, wins, draws, losses] of [
+        [2, 0, homeClubId === ELCHE_CLUB_ID ? 2 : 1, 0, homeClubId === ELCHE_CLUB_ID ? 0 : 1],
+        [0, 2, homeClubId === ELCHE_CLUB_ID ? 1 : 2, 0, homeClubId === ELCHE_CLUB_ID ? 1 : 0],
+        [0, 0, 1, 1, 0],
+      ]) {
+        await tx.update(matches).set({ homeClubId, awayClubId, homeScore, awayScore, factualNotes: "Decidido en tanda de penaltis" }).where(eq(matches.id, fixtureIds.homeMatch));
+        const summary = await readHomeSummary(tx);
+        assert.deepEqual([summary.wins, summary.draws, summary.losses], [wins, draws, losses]);
+      }
+    }
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.deepEqual(await readHomeSummary(tx), { trips: 4, stadiums: 2, knownVenues: 3, knownResults: 1, wins: 1, draws: 0, losses: 0 });
+    await tx.delete(attendance);
+    assert.deepEqual(await readHomeSummary(tx), { trips: 0, stadiums: 0, knownVenues: 0, knownResults: 0, wins: 0, draws: 0, losses: 0 });
   });
 });
