@@ -71,11 +71,13 @@ Genera cada secreto ejecutando `openssl rand -base64 32` por separado. No son co
 
 `npm run dev:testing` usa `.next-testing/`; puede convivir con development y con la suite automática. Se niega a arrancar si falta configuración aislada. No crees una contraseña local ni actives permisos de administrador en Neon para conceder acceso al archivo: los roles del servicio no sustituyen nuestra allowlist.
 
-El proxy de sesión solo redirige `/admin`; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
+El proxy de sesión cubre `/admin` y `/auth/account`, donde completa el intercambio nativo del verificador de OAuth; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
 
 En `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. Todavía no hay edición de partidos, notas, asistencias, fotos ni importaciones.
 
 **Comprobación manual antes de integrar Milestone 3:** verifica en ambos entornos login real con Google, conservación de sesión tras recargar, acceso solo con el ID configurado y cierre de sesión. Si dispones de otra cuenta, confirma que puede autenticarse pero no administrar. Las pruebas automáticas cubren esos límites con sesiones sintéticas y el SDK real, pero no prueban el consentimiento real de Google.
+
+Aceptación manual del Milestone 3 completada por el propietario el 2026-10-18 en development y testing: login con Google, acceso al admin, persistencia tras recargar y logout.
 
 Neon gestiona sus tablas de Auth; no las migres con Drizzle ni las cargues con el seed. Para producción habrá que configurar OAuth/dominio propios posteriormente; no está configurada por este milestone.
 
@@ -163,7 +165,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 - `src/db/`: esquema Drizzle, conexión, consultas públicas y entrada de fixtures sintéticos.
 - `src/lib/`: identidad estable de Elche, formato, geografía y slugs.
 - `src/server/`: sesión Neon Auth, allowlist y límites de administración.
-- `src/proxy.ts`: middleware nativo de sesión, limitado a `/admin`.
+- `src/proxy.ts`: middleware nativo de sesión para `/admin` y el retorno OAuth en `/auth/account`.
 - `drizzle/`: migraciones SQL y metadatos generados; estos JSON describen el esquema, no almacenan partidos.
 - `scripts/`: comandos locales explícitos de base de datos.
 - `tests/`: integración PostgreSQL y HTTP.

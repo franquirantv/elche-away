@@ -1,6 +1,6 @@
 # Elche Away
 
-Personal public archive of attended Elche CF away matches, with one owner's protected admin area. Milestones 1 and 2 are implemented; keep changes scoped to the authorized milestone.
+Personal public archive of attended Elche CF away matches, with one owner's protected admin area. Milestones 1–3 are complete; keep changes scoped to the authorized milestone.
 
 ## Comunicación
 
