@@ -22,6 +22,15 @@ Personal public archive of attended Elche CF away matches, with one owner's prot
 - Prefer strict types and existing patterns; avoid `any` and speculative abstractions. Keep diffs focused. Test behavior, domain rules and authorization boundaries.
 - Commit reviewed Drizzle migrations for schema changes. No schema push or ad hoc production SQL. Test on disposable data; never silently reset data.
 
+## Git workflow
+
+- `main` always represents the latest stable, integrated state. Never implement a feature or milestone directly on `main`.
+- Before new work, inspect Git status and branch. Create a dedicated branch from up-to-date `main`; confirm the correct branch before modifying code. Never switch branches if local changes could be lost; resolve that situation with the owner first.
+- Use descriptive names such as `feature/milestone-3-auth`, `feature/milestone-4-trip-management`, `feature/milestone-5-map`, or `fix/...` for independent fixes. Do not mix unrelated features in one branch.
+- Keep commits small and coherent, with descriptive English Conventional Commits-style messages. Update required README/documentation in the same branch.
+- Before declaring a branch finished, run the applicable checks below and review the complete diff, including new files. Report the branch, commits created, verification results, and readiness for integration into `main`.
+- Without the owner's explicit authorization, never merge into `main`, push, perform destructive rebases, force-push, or delete branches.
+
 ## Efficient workflow and checks
 
 Read this file first, then only the relevant document and skill. Locate targeted files before reading them; inspect direct callers/tests. Skip generated output, lockfiles, dependencies and unrelated code. Use `rg`, falling back to `find` if unavailable. Delegate only meaningful independent reasoning, keep plans proportional, and repeat passing checks only when changes justify it.
