@@ -124,3 +124,14 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .admin-card { min-width: 0; overflow-wrap: anywhere; }
 .admin-card > p { line-height: 1.8; margin-block: 8px; }
 .admin-field textarea { resize: vertical; }
+
+.map-coverage { margin-block: 24px 12px; }
+.map-section { margin-block: 24px 40px; }
+.map-section > p { line-height: 1.7; }
+.stadium-map { height: clamp(300px, 55svh, 560px); width: 100%; margin-top: 20px; isolation: isolate; border: 1px solid #9aaa9e; }
+.map-attribution { background: white; padding: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.map-attribution a { text-decoration: underline; }
+.stadium-marker { display: grid; place-items: center; color: #155d43; font-size: 28px; text-shadow: 0 0 3px white, 0 0 6px white; }
+.stadium-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
+.stadium-map .leaflet-popup-content a { text-decoration: underline; font-weight: 700; }
+#stadium-list { scroll-margin-top: 24px; }

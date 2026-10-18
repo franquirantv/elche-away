@@ -272,3 +272,22 @@ test("home summary derives totals, coverage and oriented finished results only f
     assert.deepEqual(await readHomeSummary(tx), { trips: 0, stadiums: 0, knownVenues: 0, knownResults: 0, wins: 0, draws: 0, losses: 0 });
   });
 });
+
+
+test("map data follows attendance, deduplicates visits and preserves unknown coordinates", async () => {
+  await rolledBack(async (tx) => {
+    await tx.update(stadiums).set({ latitude: 28.46, longitude: -16.25 }).where(eq(stadiums.id, fixtureIds.ground));
+    await tx.update(stadiums).set({ latitude: 39, longitude: 2 }).where(eq(stadiums.id, fixtureIds.unvisitedGround));
+    const rows = await listVisitedStadiums(tx);
+    assert.equal(rows.length, 2);
+    const ground = rows.find((row) => row.id === fixtureIds.ground)!;
+    assert.equal(ground.latitude, 28.46);
+    assert.equal(ground.longitude, -16.25);
+    assert.equal(ground.visits, 2);
+    assert.equal(ground.isSpecial, true);
+    assert.equal(rows.find((row) => row.id === fixtureIds.otherGround)?.latitude, null);
+    assert.ok(rows.every((row) => row.id !== fixtureIds.unvisitedGround));
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal((await listVisitedStadiums(tx)).find((row) => row.id === fixtureIds.ground)?.isSpecial, false);
+  });
+});

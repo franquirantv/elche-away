@@ -15,6 +15,7 @@ export async function mutateReference(_previous: ReferenceState, form: FormData)
     values = readReferenceInput(form);
     await writeReference(getDatabase(), referenceKind(values.kind), values);
     revalidatePath("/admin");
+    revalidatePath("/map");
     revalidatePath("/trips", "layout");
     revalidatePath("/stadiums", "layout");
     return { ok: true, message: values.intent === "delete" ? "Referencia eliminada." : "Referencia guardada." };

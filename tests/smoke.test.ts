@@ -469,3 +469,14 @@ test("home renders attendance totals and explicit result and venue coverage", as
     assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
   } finally { await pool.end(); }
 });
+
+
+test("map serves usable stadium links and coordinate coverage without tiles or JavaScript", async () => {
+  const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+  assert.match(html, /Estadios con coordenadas: 0 de 2/);
+  assert.match(html, /Sin coordenadas: 2/);
+  assert.match(html, /href="\/stadiums\/estadio-del-corcho-ejemplo"/);
+  assert.match(html, /href="\/stadiums\/campo-del-recuerdo-ejemplo"/);
+  assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+  assert.match(html, /Todavía no hay coordenadas/);
+});

@@ -6,7 +6,7 @@
 
 Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
-PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; todavía no hay fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
 ## Requisitos
 
@@ -228,7 +228,7 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 | `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
 | `/stadiums/[slug]` | Información y viajes asociados al estadio visitado. |
-| `/map` | Estado de próxima disponibilidad, sin mapa interactivo. |
+| `/map` | Mapa Leaflet de estadios visitados, cobertura de coordenadas y lista alternativa. |
 | `/auth/sign-in` | Acceso con Google. |
 | `/auth/account` | Sesión propia, identificador para configurar la allowlist y cierre de sesión. |
 | `/admin` | Partidos locales, filtros por temporada/competición, asistencia y referencias; requiere identidad configurada. |
@@ -304,3 +304,32 @@ En desarrollo o testing (nunca producción), abre `/` en móvil y escritorio y c
 Desde `/admin`, marca y desmarca una asistencia y recarga el inicio: los totales deben reflejarla sin borrar el partido. Dos visitas al mismo estadio cuentan como dos viajes y un estadio. Un viaje sin estadio cuenta solo en viajes. Comprueba un resultado finalizado como local y como visitante; un 0–0 finalizado es empate. Cambia el estado a programado, aplazado, cancelado, abandonado o desconocido: el marcador deja de contribuir. Un finalizado sin marcador tampoco aporta resultado. Las tandas no cambian el empate de los goles jugados. Sin asistencias deben mostrarse ceros y el mensaje de archivo vacío. Restaura los datos de prueba al terminar.
 
 Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correctos; dos ejecuciones consecutivas de `npm test` con 53/53 pruebas, sin omisiones y con limpieza de sus bases temporales; build de producción correcto mediante `npm run build -- --webpack`. Las huellas de las nueve tablas existentes de testing permanecieron idénticas. El comportamiento funcional aceptado no se modificó.
+
+## Mapa (Milestone 5)
+
+Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. Solo se solicitan tiles al activar el mapa.
+
+Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
+
+| Variable | Valor predeterminado |
+| --- | --- |
+| `MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+| `MAP_TILE_ATTRIBUTION_TEXT` | `OpenStreetMap contributors` |
+| `MAP_TILE_ATTRIBUTION_URL` | `https://www.openstreetmap.org/copyright` |
+| `MAP_TILE_MAX_ZOOM` | `19` (entero entre 1 y 19) |
+
+La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución debe enlazar a HTTPS. Configuración inválida desactiva el mapa y conserva la lista. Para cambiar proveedor, revisar condiciones/coste y configurar URL, atribución y zoom sin cambiar el componente. Reiniciar el servidor local tras editar `.env.local`.
+
+### Aceptación manual en escritorio y móvil
+
+1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/map` en escritorio y móvil (o viewport de 390 px).
+2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar `/map`. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas».
+3. Activar el mapa: un marcador por estadio aunque haya varias asistencias; abrir el marcador y seguir el enlace a su historial. Los viajes especiales muestran estrella y texto. Un estadio sin asistencias no debe aparecer.
+4. En escritorio comprobar botones de zoom, navegación por teclado, foco visible, enlaces y atribución. La rueda permite desplazar la página. En móvil comprobar pulsación de marcador, zoom con dos dedos, orientación y desactivar el mapa para desplazarse sin capturas táctiles. Verificar que no hay desbordamiento horizontal.
+5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red del navegador antes de activar el mapa: debe aparecer el aviso de fallo y todos los enlaces de la lista deben seguir funcionando. Quitar el bloqueo y desactivar/activar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, sin activar el mapa no se solicitan tiles; al activarlo comprobar HTTPS y Referer. La atribución permanece visible bajo el mapa a cualquier zoom.
+7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío.
+
+La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
+
+Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lint`, `npm run typecheck` y `npm test` correctos (55/55, sin omisiones; base temporal eliminada). `npm run build` con Turbopack falló por permisos al abrir un puerto local durante el procesamiento CSS; `npm run build -- --webpack` pasó. Aceptación manual pendiente.

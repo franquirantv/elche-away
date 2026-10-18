@@ -41,6 +41,8 @@ export async function findTrip(db: QueryDatabase, slug: string) {
 export function listVisitedStadiums(db: QueryDatabase) {
   return db.select({
     id: stadiums.id, slug: stadiums.slug, name: stadiums.name, city: stadiums.city, provinceCode: stadiums.provinceCode,
+    latitude: stadiums.latitude, longitude: stadiums.longitude,
+    isSpecial: sql<boolean>`bool_or(${attendance.isSpecial})`,
     visits: sql<number>`count(*)::integer`,
   }).from(stadiums)
     .innerJoin(matches, eq(matches.stadiumId, stadiums.id))
