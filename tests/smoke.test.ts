@@ -188,12 +188,12 @@ test("configured owner can read all reference categories through the native sess
   }
 });
 
-async function actionId() {
+async function actionId(name = "mutateReference") {
   // Exercise the actual server-action entry point, independently of page gating.
   const manifest = JSON.parse(await readFile(".next-test/dev/server/server-reference-manifest.json", "utf8"));
   const entries = Object.entries(manifest.node) as [string, { exportedName?: string; workers: Record<string, { moduleId: string | number; async: boolean }> }][];
-  const found = entries.find(([, action]) => action.exportedName === "mutateReference");
-  if (!found) throw new Error("mutateReference missing from test server action manifest");
+  const found = entries.find(([, action]) => action.exportedName === name);
+  if (!found) throw new Error(`${name} missing from test server action manifest`);
   return found[0];
 }
 
@@ -274,4 +274,57 @@ test("native sign-out clears access and a reused session token cannot administer
     const account = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: identity.ownerCookie } })).text();
     assert.match(account, /Continuar con Google/);
   } finally { identity.restoreOwner(); }
+});
+
+
+test("fixture browser and actual fixture actions enforce owner authorization and publish attendance", async () => {
+  const ownerPage = await (await fetch(`${origin}/admin`, { headers: { Cookie: identity.ownerCookie } })).text();
+  assert.match(ownerPage, /Partidos locales/);
+  assert.match(ownerPage, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
+  const id = await actionId("mutateFixture");
+  const require = createRequire(import.meta.url);
+  const { encodeReply } = require("next/dist/compiled/react-server-dom-turbopack/client.node") as { encodeReply: (value: unknown[]) => Promise<string | FormData> };
+  async function submit(values: Record<string, string>, cookie: string) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(values)) form.set(key, value);
+    const body = await encodeReply([{ ok: false, message: "" }, form]);
+    const response = await fetch(`${origin}/admin`, { method: "POST", redirect: "manual", headers: { "Next-Action": id, Origin: origin, Cookie: cookie }, body });
+    return response.text();
+  }
+  const { attendance } = await import("../src/db/schema");
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const marker = `HTTP synthetic fixture ${randomUUID()}`;
+  let createdId: string | undefined;
+  try {
+    const beforeFixtures = await db.select().from(matches).orderBy(matches.id);
+    const beforeAttendance = await db.select().from(attendance).orderBy(attendance.matchId);
+    for (const cookie of ["", identity.otherCookie]) {
+      for (const intent of ["save", "attend", "unattend", "delete"]) {
+        await submit({ intent, id: fixtureIds.homeMatch, factualNotes: marker, status: "unknown", confirmDelete: "yes", userId: identity.ownerId }, cookie);
+      }
+    }
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), beforeFixtures);
+    assert.deepEqual(await db.select().from(attendance).orderBy(attendance.matchId), beforeAttendance);
+    assert.equal((await db.select().from(matches).where(eq(matches.factualNotes, marker))).length, 0);
+    assert.equal((await db.select().from(attendance).where(eq(attendance.matchId, fixtureIds.unattendedMatch))).length, 0);
+    assert.ok((await db.select().from(matches).where(eq(matches.id, fixtureIds.unattendedMatch))).length);
+    assert.match(await submit({ intent: "save", status: "unknown", factualNotes: marker, confirmDuplicate: "yes" }, identity.ownerCookie), /Partido guardado/);
+    const [created] = await db.select().from(matches).where(eq(matches.factualNotes, marker));
+    assert.ok(created); createdId = created.id;
+    await submit({ intent: "attend", id: created.id, notes: "Memoria pública sintética", isSpecial: "yes" }, identity.ownerCookie);
+    const [personal] = await db.select().from(attendance).where(eq(attendance.matchId, created.id));
+    assert.ok(personal);
+    assert.match(await (await fetch(`${origin}/trips/${personal.slug}`)).text(), /Memoria pública sintética/);
+    assert.match(await submit({ intent: "delete", id: created.id, confirmDelete: "yes" }, identity.ownerCookie), /Desmarca primero/);
+    await submit({ intent: "unattend", id: created.id, confirmDelete: "yes" }, identity.ownerCookie);
+    assert.equal((await fetch(`${origin}/trips/${personal.slug}`)).status, 404);
+    await submit({ intent: "delete", id: created.id, confirmDelete: "yes" }, identity.ownerCookie);
+    assert.equal((await db.select().from(matches).where(eq(matches.id, created.id))).length, 0);
+  } finally {
+    if (createdId) {
+      await db.delete(attendance).where(eq(attendance.matchId, createdId));
+      await db.delete(matches).where(eq(matches.id, createdId));
+    }
+    await pool.end();
+  }
 });

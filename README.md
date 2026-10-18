@@ -6,7 +6,7 @@
 
 Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
-PostgreSQL es la única fuente persistente. Hay acceso con Google y edición privada de referencias; todavía no hay gestión de partidos/asistencias, importación/API de fútbol, fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias; todavía no hay importación/API de fútbol, fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
 ## Requisitos
 
@@ -66,20 +66,34 @@ Genera cada secreto ejecutando `openssl rand -base64 32` por separado. No son co
 1. Arranca `npm run dev` y abre http://localhost:3000/auth/sign-in.
 2. Pulsa **Continuar con Google** e inicia sesión con tu cuenta. Volverás a `/auth/account`.
 3. La pantalla mostrará tu identificador y que aún no tienes permisos. Copia ese ID en `ADMIN_USER_ID` dentro de `.env.local`, revisando que sea tu propia sesión de development. No se acepta un email, rol ni el ID enviado por un formulario.
-4. Reinicia el servidor y visita `/admin`. Solo la identidad configurada puede leer referencias y ejecutar cambios.
+4. Reinicia el servidor y visita `/admin`. Solo la identidad configurada puede leer datos administrativos y ejecutar cambios.
 5. Para comprobar el otro entorno, ejecuta `npm run dev:testing` y usa http://localhost:3001/auth/sign-in. El script fuerza la base, Auth URL, secreto e identidad de testing; no reutiliza valores de development. Copia el ID de `/auth/account` de ese entorno en `TEST_ADMIN_USER_ID` y reinicia ese servidor. Usa los hosts `localhost` indicados para las comprobaciones de cookies/OAuth. Abre testing en otro perfil de navegador o en una ventana de incógnito: las cookies se comparten entre puertos del mismo host y usar 3001 no las aísla por sí solo.
 
 `npm run dev:testing` usa `.next-testing/`; puede convivir con development y con la suite automática. Se niega a arrancar si falta configuración aislada. No crees una contraseña local ni actives permisos de administrador en Neon para conceder acceso al archivo: los roles del servicio no sustituyen nuestra allowlist.
 
 El proxy de sesión cubre `/admin` y `/auth/account`, donde completa el intercambio nativo del verificador de OAuth; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
 
-En `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. Todavía no hay edición de partidos, notas, asistencias, fotos ni importaciones.
+En las pestañas de referencias de `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. No hay fotos ni importaciones.
 
 **Comprobación manual antes de integrar Milestone 3:** verifica en ambos entornos login real con Google, conservación de sesión tras recargar, acceso solo con el ID configurado y cierre de sesión. Si dispones de otra cuenta, confirma que puede autenticarse pero no administrar. Las pruebas automáticas cubren esos límites con sesiones sintéticas y el SDK real, pero no prueban el consentimiento real de Google.
 
 Aceptación manual del Milestone 3 completada por el propietario el 2026-10-18 en development y testing: login con Google, acceso al admin, persistencia tras recargar y logout.
 
 Neon gestiona sus tablas de Auth; no las migres con Drizzle ni las cargues con el seed. Para producción habrá que configurar OAuth/dominio propios posteriormente; no está configurada por este milestone.
+
+## Partidos y asistencia (Milestone 4a)
+
+`/admin` abre los partidos persistidos en PostgreSQL. Filtra por temporada/competición o pulsa **Añadir partido** para crear historia manualmente. Puedes dejar datos desconocidos; con designación conocida, asigna Elche exactamente a un lado. Sin designación, deja ambos clubes y goles vacíos y conserva el conocimiento parcial en anotaciones factuales. La división se consulta desde la temporada, separada de la competición. Los posibles duplicados requieren revisión y confirmación; no hay unicidad por fecha/rival.
+
+**Corregir o eliminar partido** edita hechos y activa el bloqueo completo `facts_locked`, sin cambiar asistencia ni enlaces. **Marcar asistencia** permite añadir notas públicas y distinguir un partido especial. Guardarla publica inmediatamente el viaje; editarla conserva el slug. Desmarcar exige confirmación y elimina el registro personal, incluidas notas y enlace público, conservando el partido. Marcar de nuevo crea un registro personal nuevo con un slug generado con la información actual. Un partido con asistencia no puede eliminarse: desmarca primero y confirma después su eliminación.
+
+Para probar manualmente en testing (`npm run dev:testing`), usa únicamente ejemplos sintéticos:
+
+1. Comprueba filtros y añade un partido incompleto, sin inventar hechos históricos.
+2. Marca asistencia con notas y distinción; abre el enlace público y comprueba viajes y visitas al estadio, incluidas visitas repetidas.
+3. Corrige fecha/resultado/estadio y verifica que se conserva el enlace y los recuerdos. Un estado no finalizado muestra resultado desconocido.
+4. Desmarca tras confirmar: el enlace devuelve 404 y el partido sigue en administración. Comprueba que el borrado de un partido asistido se rechaza y que un partido sin asistencia puede eliminarse tras confirmar.
+5. Revisa formularios, foco y mensajes en móvil y escritorio. Una sesión ajena no debe poder leer ni modificar partidos.
 
 ## Migraciones y datos sintéticos
 
@@ -125,7 +139,7 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 | `/map` | Estado de próxima disponibilidad, sin mapa interactivo. |
 | `/auth/sign-in` | Acceso con Google. |
 | `/auth/account` | Sesión propia, identificador para configurar la allowlist y cierre de sesión. |
-| `/admin` | Gestión protegida de referencias; requiere identidad configurada. |
+| `/admin` | Partidos locales, filtros por temporada/competición, asistencia y referencias; requiere identidad configurada. |
 
 Abre los detalles desde los enlaces de las listas: `[slug]` es un parámetro, no una URL literal. El seed ofrece `/stadiums/estadio-del-corcho-ejemplo` y un viaje de información incompleta en `/trips/viaje`. Los nombres/fechas corregidos no regeneran slugs. Un estadio no visitado o un viaje inexistente no es público; muestra 404.
 

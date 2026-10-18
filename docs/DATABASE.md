@@ -92,7 +92,7 @@ Generate versioned Drizzle SQL and inspect it. Test constraints and upgrades on 
 - Local commands validate that development pooled/direct URLs match and testing targets another database. They refuse production/Vercel execution; credential ownership still requires correct nonproduction configuration by the owner.
 - `src/lib/identity.ts` defines the stable Elche UUID used by synthetic fixtures and future write validation. No football results or historical tier membership are claimed by the seed.
 - Synthetic seed inputs live in TypeScript solely for database insertion. Seed operations are transactional, additive and repeatable, preserving existing IDs/slugs/corrections. No reset or alternative persistence exists.
-- Elche-participation validation is enforced on the current only write entry point (local seed). All future admin/import write paths must reuse validation; no public mutation endpoints exist in this milestone. Referenced Elche deletion is additionally prevented by FK constraints; future reference management must reject deletion of the configured Elche even without matches.
+- Elche-participation validation is shared by synthetic seeding and Milestone 4a manual fixture writes. Administrative writes require the existing owner authorization; no public mutation endpoints exist. Referenced Elche deletion is additionally prevented by FK constraints; future reference management must reject deletion of the configured Elche even without matches.
 - Read modules join attendance before exposing trips/visited venues. Build requires no database access; missing/broken runtime configuration fails explicitly rather than returning synthetic or empty fallback data.
 - Initial SQL permits only trusted, flat `/crests/` file references with supported image extensions. No assets/uploads are introduced.
 
@@ -101,3 +101,7 @@ Generate versioned Drizzle SQL and inspect it. Test constraints and upgrades on 
 No public-domain schema change is required. Reference mutations use existing tables/constraints, explicit owner authorization, nullable normalization and immutable existing slugs. Elche deletion is refused in the write helper even if no fixtures reference it. Competition/season/tier edits remain independent of fixture attendance.
 
 Neon Auth owns users, accounts and sessions under its managed `neon_auth` schema; our Drizzle migrations/seed do not manage those tables or create a second local auth schema. No user_id or role table is added to the single-owner domain. Application admin authorization is an environment-configured Neon user ID for each branch, not a database role flag.
+
+## Milestone 4a local management
+
+No schema migration is needed. Manual creates/corrections set `facts_locked=true`. Attendance writes never update fixture facts; fixture writes never change personal notes, special status or existing slugs. Writes lock the parent match within a transaction, serializing attendance creation/removal and match deletion. Unmarking removes attendance only; match deletion refuses attended fixtures. Plausible duplicates (equal date, sides, season and competition, including nulls) require explicit confirmation rather than a uniqueness constraint. Attendance slug collisions use the existing unique constraint and bounded retries.

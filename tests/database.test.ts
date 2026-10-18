@@ -200,3 +200,47 @@ test("reference management preserves slugs, validates fields and protects refere
     assert.equal((await listTrips(tx)).find((trip) => trip.competition === "Copa de ejemplo")?.tier, "División de ejemplo");
   });
 });
+
+test("fixture management filters locally, locks corrections and isolates attendance with stable links", async () => {
+  const { writeFixture, readAdminFixtures } = await import("../src/db/admin-fixtures");
+  const { readFixtureInput } = await import("../src/server/fixture-input");
+  const input = (values: Record<string, string>) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries({ intent: "save", status: "unknown", ...values })) form.set(key, value);
+    return readFixtureInput(form);
+  };
+  await rolledBack(async (tx) => {
+    const marker = `Synthetic fixture ${randomUUID()}`;
+    const facts = { homeClubId: fixtureIds.north, awayClubId: ELCHE_CLUB_ID, stadiumId: fixtureIds.ground, seasonId: fixtureIds.season, competitionId: fixtureIds.cup, factualNotes: marker };
+    await writeFixture(tx, input(facts));
+    const [created] = await tx.select().from(matches).where(eq(matches.factualNotes, marker));
+    assert.equal(created.playedOn, null);
+    assert.equal(created.homeScore, null);
+    assert.equal(created.factsLocked, true);
+    assert.ok((await readAdminFixtures(tx, { seasonId: fixtureIds.season, competitionId: fixtureIds.cup })).some((row) => row.fixture.id === created.id));
+    await assert.rejects(() => writeFixture(tx, input(facts)), /Revisa/);
+    await writeFixture(tx, input({ ...facts, confirmDuplicate: "yes" }));
+    await writeFixture(tx, input({ id: created.id, intent: "attend", notes: "Recuerdo sintético", isSpecial: "yes" }));
+    const [personal] = await tx.select().from(attendance).where(eq(attendance.matchId, created.id));
+    assert.equal((await findTrip(tx, personal.slug))?.notes, "Recuerdo sintético");
+    await writeFixture(tx, input({ ...facts, id: created.id, playedOn: "2035-02-03", homeScore: "0", awayScore: "0", status: "scheduled" }));
+    const corrected = await findTrip(tx, personal.slug);
+    assert.equal(corrected?.slug, personal.slug);
+    assert.equal(corrected?.isSpecial, true);
+    assert.equal(tripScore(corrected!), "Resultado desconocido");
+    await writeFixture(tx, input({ id: created.id, intent: "attend", notes: "Recuerdo editado" }));
+    assert.equal((await findTrip(tx, personal.slug))?.slug, personal.slug);
+    await assert.rejects(() => writeFixture(tx, input({ id: created.id, intent: "delete", confirmDelete: "yes" })));
+    await assert.rejects(() => writeFixture(tx, input({ id: created.id, intent: "unattend" })));
+    await writeFixture(tx, input({ id: created.id, intent: "unattend", confirmDelete: "yes" }));
+    assert.equal(await findTrip(tx, personal.slug), undefined);
+    assert.ok((await readAdminFixtures(tx)).some((row) => row.fixture.id === created.id && !row.personal));
+    await writeFixture(tx, input({ id: created.id, intent: "delete", confirmDelete: "yes" }));
+    assert.ok(!(await readAdminFixtures(tx)).some((row) => row.fixture.id === created.id));
+    const invalidInputs: Record<string, string>[] = [{ playedOn: "2030-02-30" }, { status: "__proto__" }, { homeScore: "1" }, { homeClubId: fixtureIds.south, awayClubId: fixtureIds.north }];
+    for (const bad of invalidInputs) {
+      await assert.rejects(() => writeFixture(tx, input(bad)));
+    }
+    await writeFixture(tx, input({ factualNotes: "Unknown synthetic designation", confirmDuplicate: "yes" }));
+  });
+});

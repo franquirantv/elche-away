@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; Milestone 3 auth/reference editing is implemented pending owner identity configuration and real Google acceptance; imports and deployment remain planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.
+Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; Milestone 3 auth/reference editing is complete; Milestone 4a adds local fixture and attendance administration; imports and deployment remain planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.
 
 ## One application
 
@@ -55,7 +55,7 @@ Alternatives reviewed: Auth.js has an adapter-free session option but its curren
 
 `src/proxy.ts` applies native SDK session middleware to `/admin/:path*` and the OAuth landing page `/auth/account`, for the native verifier exchange, session redirects and cookie maintenance. It is not an authorization boundary. Every protected read and Server Action calls `requireAdmin()` independently before reading PostgreSQL or parsing/writing submitted references. The native `/api/auth/[...path]` handler preserves OAuth/verifier/session handling. Cookies and auth responses are not public cached content; public archive pages remain independent of Auth availability.
 
-Milestone 3 reference editing covers clubs/stadiums/competitions/tiers/seasons only. Server validation normalizes optional fields, keeps existing slugs unchanged, retries concurrent slug reservations under SQL uniqueness, requires explicit delete confirmation and prevents deleting Elche even if unreferenced. PostgreSQL RESTRICT prevents deleting used references. No match/attendance mutations are exposed yet.
+Milestone 3 reference editing covers clubs/stadiums/competitions/tiers/seasons only. Server validation normalizes optional fields, keeps existing slugs unchanged, retries concurrent slug reservations under SQL uniqueness, requires explicit delete confirmation and prevents deleting Elche even if unreferenced. PostgreSQL RESTRICT prevents deleting used references. Milestone 4a exposes separately authorized fixture and attendance actions; each write runs in a PostgreSQL transaction, locking the parent fixture to serialize attendance changes and deletion. Public reads remain attendance-only.
 
 Managed users/sessions/configuration belong to Neon's `neon_auth` schema, outside our Drizzle schema and synthetic domain seed. Do not introspect/adopt or reset those tables. Branches were configured separately; no production is used. Automated tests use a loopback-only synthetic Auth upstream exercising the real SDK/middleware/actions, not Google or real user accounts. It is test code only; the app has no login bypass. Real Google login/logout/restoration and final owner allowlist are explicit manual acceptance checks, not claimed by simulated tests. See README.
 
