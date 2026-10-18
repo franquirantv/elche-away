@@ -95,6 +95,8 @@ Para probar manualmente en testing (`npm run dev:testing`), usa únicamente ejem
 4. Desmarca tras confirmar: el enlace devuelve 404 y el partido sigue en administración. Comprueba que el borrado de un partido asistido se rechaza y que un partido sin asistencia puede eliminarse tras confirmar.
 5. Revisa formularios, foco y mensajes en móvil y escritorio. Una sesión ajena no debe poder leer ni modificar partidos.
 
+Aceptación manual del submilestone 4a completada y confirmada por el propietario el 2026-10-18.
+
 ## Migraciones y datos sintéticos
 
 Primero verifica la migración en testing y carga sus ejemplos:
