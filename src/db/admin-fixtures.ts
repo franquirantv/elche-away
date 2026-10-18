@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Database } from "./connection";
-import { attendance, clubs, matches } from "./schema";
+import { attendance, clubs, matches, matchSources } from "./schema";
 import { fixtureFacts } from "../server/fixture-input";
 import { InvalidReference, validId, type ReferenceValues } from "../server/reference-input";
 import { availableSlug } from "../lib/slugs";
@@ -29,6 +29,7 @@ export async function writeFixture(db: FixtureDatabase, v: ReferenceValues) {
     if (v.confirmDelete !== "yes") throw new InvalidReference({ confirmDelete: "Confirma la eliminación." });
     if (v.intent === "delete") {
       if ((await db.select().from(attendance).where(eq(attendance.matchId, id!))).length) throw new InvalidReference({ id: "Desmarca primero la asistencia; no se puede eliminar un partido con asistencia." });
+      if ((await db.select({ id: matchSources.id }).from(matchSources).where(eq(matchSources.matchId, id!))).length) throw new InvalidReference({ id: "Este partido tiene procedencia importada y no se puede eliminar. Conserva sus vínculos históricos." });
       await db.delete(matches).where(eq(matches.id, id!));
     } else await db.delete(attendance).where(eq(attendance.matchId, id!));
     return;

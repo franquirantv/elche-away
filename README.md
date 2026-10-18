@@ -6,7 +6,7 @@
 
 Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
-PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias; todavía no hay importación/API de fútbol, fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; todavía no hay fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
 ## Requisitos
 
@@ -73,7 +73,7 @@ Genera cada secreto ejecutando `openssl rand -base64 32` por separado. No son co
 
 El proxy de sesión cubre `/admin` y `/auth/account`, donde completa el intercambio nativo del verificador de OAuth; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
 
-En las pestañas de referencias de `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. No hay fotos ni importaciones.
+En las pestañas de referencias de `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. La importación explícita de archivos se abre en `/admin/import`; no hay fotos.
 
 **Comprobación manual antes de integrar Milestone 3:** verifica en ambos entornos login real con Google, conservación de sesión tras recargar, acceso solo con el ID configurado y cierre de sesión. Si dispones de otra cuenta, confirma que puede autenticarse pero no administrar. Las pruebas automáticas cubren esos límites con sesiones sintéticas y el SDK real, pero no prueban el consentimiento real de Google.
 
@@ -96,6 +96,96 @@ Para probar manualmente en testing (`npm run dev:testing`), usa únicamente ejem
 5. Revisa formularios, foco y mensajes en móvil y escritorio. Una sesión ajena no debe poder leer ni modificar partidos.
 
 Aceptación manual del submilestone 4a completada y confirmada por el propietario el 2026-10-18.
+
+## Importación directa del histórico y actualizaciones (Milestone 4c)
+
+El flujo principal está en **`/admin/import`**. Selecciona un rango de temporadas; el predeterminado empieza en **2017/18** y termina en la temporada actual (año de inicio calculado en Europe/Madrid, con cambio en julio). Tanto la carga inicial como las futuras actualizaciones comienzan con **Comprobar datos disponibles**, siempre por iniciativa del propietario. No necesitas buscar archivos, descargarlos ni introducir repositorio, ruta o revisión.
+
+La comprobación accede sin cuenta ni token exclusivamente a `openfootball/football.json` y `openfootball/espana`. Resuelve `master` a un commit fijo por repositorio al inicio y consulta sus catálogos en esas revisiones. Para Primera/Segunda/Copa prioriza el JSON compatible y usa Football.TXT si no hay JSON catalogado. Solo conserva los registros cuyo equipo sea exactamente `Elche CF`. Las peticiones tienen límites de tamaño/tiempo y no siguen redirecciones. No se aceptan URLs o repositorios suministrados por el navegador.
+
+Los errores de red, HTTP, límites de acceso, catálogos truncados o formatos no compatibles se muestran como errores, separados de la ausencia comprobada de un archivo. Un archivo sin Elche no prueba que no hubiera partidos. Segunda B/Primera Federación y playoffs permanecen expresamente sin cobertura acreditada; revisa esas lagunas, en especial 2017/18 y el ascenso de 2020, y complétalas con 4a. Si alguna obtención falla puedes revisar e importar el subconjunto disponible o volver a comprobar después; el error no se convierte en un resultado vacío.
+
+### Revisar antes de escribir
+
+La obtención y el **preview global** no escriben nada en PostgreSQL. Revisa:
+
+- La cobertura de cada temporada/competición y los commits de ambos repositorios.
+- Las referencias propuestas: se indica **SE CREARÁ** para cada club, temporada o competición nueva. Una coincidencia exacta única puede proponerse como existente; las ambiguas requieren elección. Los vínculos históricos exactos permiten conservar la identidad de clubes renombrados localmente. Si varias grafías del mismo club o competición apuntan a una referencia nueva propuesta, puedes asignarlas a esa misma referencia en el selector para crearla una sola vez. No se infieren divisiones ni estadios.
+- Los partidos de todas las temporadas, agrupados en lotes. Se mantienen las cinco categorías: nuevo, sin cambios, actualización propuesta, corrección protegida y conflicto manual. Los nuevos sin candidatos se proponen como altas y requieren la confirmación global; los conflictos no se resuelven automáticamente por fecha/rival.
+- Los conflictos: vincula al partido correcto, confirma que es otro partido u omítelo. **Marcar pendientes como nuevos** es una decisión explícita de altas, no un algoritmo de deduplicación; no la uses para ocultar dudas sobre candidatos reales. También puedes omitir los pendientes.
+
+Después de cambiar referencias o destinos pulsa **Actualizar preview global**. Antes de aplicar deben quedar resueltas todas las referencias y decisiones de todos los lotes. La aplicación compara el estado local revisado: si cambió, detiene el lote y pide una comprobación nueva. Los campos ausentes conservan valores locales; las correcciones bloqueadas, asistencias, notas y slugs prevalecen.
+
+### Confirmar, detener y reanudar
+
+**Aplicar importación revisada** exige confirmar el preview global. La página inicia solicitudes sucesivas para lotes de hasta 40 partidos mientras permanece abierta. Cada lote incluye sus referencias necesarias, partidos, procedencia y recibo en una única transacción: todo o nada dentro de ese lote. La garantía no es una transacción global: un fallo detiene la continuación y conserva los lotes anteriores. Se muestra el resultado de cada uno.
+
+Puedes pulsar **Detener después del lote en curso** y luego **Continuar lotes pendientes**. La revisión firmada se guarda en `sessionStorage` de esta pestaña/origen; tras recargar, **Recuperar revisión y progreso** consulta recibos sin aplicar datos ni consultar GitHub. Si se perdió la respuesta de un lote, su recibo impide repetir escrituras. La recuperación no continúa por sí sola: debes confirmarlo. Los recibos se guardan en `import_batches` solo al aplicar, nunca durante el preview.
+
+La revisión caduca a los 30 minutos desde su última respuesta válida. Si caduca, se pierde el estado del navegador o cambian hechos/referencias locales, genera una comprobación nueva: los registros ya aceptados se reconocen por procedencia, y los nuevos/cambiados vuelven a revisión. No cambies manualmente las decisiones de una ejecución ya iniciada; solicita otra comprobación. Los recibos son progreso operativo, no estadísticas del archivo.
+
+No hay cron, jobs ni consultas a OpenFootball al renderizar páginas. Al cerrar la página no se lanzan más lotes; un request ya iniciado puede completar su transacción. El presupuesto de datos es 0 € y no se añaden credenciales. Máximo 20 temporadas por comprobación, archivos de 350000 bytes/2000 registros y revisión firmada de tamaño acotado; si se supera, divide el rango. El catálogo compatible reconoce `es.1.json`, `es.2.json`, `es.cup.json`, `1-liga.txt`, `2-liga2.txt` y `cup.txt`; no atribuye cobertura a otros nombres sin adaptador.
+
+### Probar la importación histórica completa en testing
+
+1. Confirma en Neon que `TEST_DATABASE_URL` es la base **testing desechable** y distinta de development. No uses una copia con datos de producción. Conserva las variables existentes; no hace falta ningún token de GitHub.
+2. Ejecuta con Node 22:
+
+   ```sh
+   nvm use
+   npm run db:migrate:test
+   npm run db:seed:test
+   npm run dev:testing
+   ```
+
+3. En otro perfil/incógnito abre **http://localhost:3001/admin/import** y entra con el propietario de testing. Selecciona **2017/18 → temporada actual** y pulsa **Comprobar datos disponibles**. Marca la interpretación final de marcadores solo tras revisar los resultados del preview. Comprueba que se obtienen varias temporadas sin pedir archivos ni metadatos. No debe aparecer aún ningún partido nuevo en otra pestaña de `/admin`.
+4. Revisa el informe de cobertura, especialmente Segunda B 2017/18, Copas ausentes y playoffs. Despliega lotes de distintas temporadas. Comprueba la lista completa de nuevas referencias y que no se asignan divisiones ni estadios.
+5. Resuelve los candidatos. Las semillas de testing incluyen partidos inventados e incompletos: no los vincules a partidos históricos reales. Si has comprobado que solo existen esas semillas, puedes proponer los pendientes como nuevos para esta prueba. En datos personales reales revisa cada conflicto. Actualiza el preview global y confirma.
+6. Comprueba progreso, recuentos y resultado de cada lote. Detén entre lotes; recarga, recupera el progreso y continúa explícitamente. No deben repetirse partidos ni referencias. Los partidos importados sin asistencia deben seguir fuera de viajes/estadios públicos.
+7. Repite la comprobación del mismo rango: versiones iguales deben reconocerse sin altas duplicadas. Para probar futuras actualizaciones usa el mismo panel con otro rango, sin configurar nada más. Usa el ejemplo del modo avanzado para simular un cambio de resultado si OpenFootball no ha cambiado todavía.
+8. Para comprobar una interrupción, corta la conexión del navegador después de confirmar un lote, recupera el estado y reanuda. Si un request alcanzó el servidor y se confirmó aunque no recibieras respuesta, debe reutilizar su recibo. Si estuvo completamente desconectado, vuelve a conectar antes de recuperar. Si GitHub limita o falla durante una comprobación, deben aparecer errores de obtención, nunca «sin cobertura» por ese fallo.
+9. Marca asistencia de un partido de prueba, conserva su slug y notas, corrige sus hechos con 4a y comprueba otra vez: debe quedar protegido. Cambiar hechos locales mientras una importación está detenida debe impedir aplicar el siguiente lote con la revisión anterior, sin revertir los ya confirmados.
+
+No ejecutes dos suites contra testing a la vez. Para volver a una base exclusivamente sintética tras esta QA utiliza otro entorno desechable y revisado; no hay reset ni borrado automático. La migración `0002_panoramic_darkhawk.sql` añade recibos sin modificar datos existentes. No se han migrado development ni producción.
+
+## Modo avanzado: importar o reimportar un archivo local (4c)
+
+No requiere cuenta, credenciales ni suscripción de fútbol. Obtén manualmente un JSON o Football.TXT del repositorio OpenFootball y conserva su ruta y revisión Git completa. Este modo no acepta URLs ni verifica que el archivo local corresponda a la revisión declarada; la obtención directa anterior sí fija y descarga la revisión automáticamente. No uses datos de fuentes con permisos sin acreditar. El archivo se procesa como entrada, nunca como persistencia alternativa.
+
+En `/admin/import` selecciona archivo, formato, procedencia, nombre exacto del Elche, temporada y competición locales. Confirma la interpretación de resultados únicamente si has comprobado que los marcadores representan goles finales jugados con prórroga y sin tanda; en caso contrario el estado será desconocido. Los datos ausentes nunca borran valores conocidos.
+
+1. **Leer archivo sin guardar**: muestra los nombres a asignar a clubes locales. No crea referencias automáticamente; crea previamente las que falten desde `/admin`. Máximo 350000 bytes y 2000 registros por archivo.
+2. **Generar preview**: procesa hasta 40 partidos del Elche a partir del desplazamiento elegido. Distingue nuevos, coincidencias sin cambios, actualizaciones propuestas, correcciones protegidas y conflictos manuales. Revisa origen, destino y diferencias. La lista de candidatos incluye partidos de la temporada y aquellos sin temporada conocida.
+3. Para cada versión sin vínculo reconocido elige **vincular**, **confirmar nuevo** u **omitir**, y pulsa **Actualizar preview**. Las coincidencias por fecha/rival son sugerencias, nunca identidad permanente. Revisa también candidatos incompletos para evitar duplicados.
+4. Confirma y pulsa **Aplicar lote revisado**. Solo aplica el último preview generado; cambiar decisiones exige regenerarlo. Caduca a los 30 minutos y cualquier cambio relevante en PostgreSQL obliga a revisarlo de nuevo. El lote se aplica íntegramente o se revierte: no queda una mitad escrita si falla.
+5. Para continuar, vuelve a cargar el archivo con desplazamiento 40, 80… según el intervalo mostrado. Para actualizar una temporada o añadir otra futura usa exactamente el mismo flujo. Las versiones reconocidas conservan su vínculo; una versión modificada requiere confirmar el destino. Si falla o pierdes la respuesta, vuelve a generar el preview: los vínculos persistidos evitan repetir altas ya aceptadas.
+
+La huella representa una versión normalizada del registro, no la identidad del partido. Repositorio, ruta, revisiones aceptadas y huella quedan en `match_sources`; se conserva la historia de vínculos. Las asistencias, notas, distinción y slugs no se alteran. Un partido bloqueado conserva todos sus hechos aunque lo vincules: solo se añade procedencia. Corrígelo con 4a si procede. Los partidos con procedencia importada no se pueden eliminar desde 4a; no hay borrado de vínculos en esta entrega.
+
+Formatos no reconocidos fallan con un mensaje; no se garantiza interpretar cualquier variante de OpenFootball. Para esos casos usa una variante compatible revisada o completa la laguna manualmente. Las sedes, campos desconocidos, partidos omitidos y huecos históricos se completan con 4a; un archivo incompleto no borra partidos existentes.
+
+### Prueba manual sin afectar a producción
+
+Usa exclusivamente las conexiones de development/testing ya configuradas. Comprueba en tu consola Neon que `TEST_DATABASE_URL` pertenece a **testing desechable** y que es distinta de development; no pegues ni imprimas las credenciales. Los comandos siguientes migran/siembran únicamente testing:
+
+```sh
+nvm use
+npm run db:migrate:test
+npm run db:seed:test
+npm run dev:testing
+```
+
+Abre **http://localhost:3001/admin/import** en otro perfil/incógnito, inicia sesión con el propietario de testing y usa [el archivo sintético de QA](docs/examples/openfootball-synthetic.json). No contiene partidos reales. Para esta prueba, declara repositorio `openfootball/football.json`, ruta `2030-31/synthetic.json` y revisión sintética `0000000000000000000000000000000000000000`; son metadatos de prueba, no una revisión real de OpenFootball. Selecciona temporada **2030/31 (ejemplo)** y **Liga de ejemplo**, desplazamiento 0 y confirma los marcadores sintéticos.
+
+- Asigna los tres nombres a los clubes sintéticos existentes. Genera el preview: revisa los candidatos. Vincula el Norte–Elche al partido sintético del 01/02/2030 y confirma el Elche–Sur del 10/10/2030 como nuevo. Actualiza el preview: el primero debe quedar protegido y el segundo nuevo. Comprueba que aún no se han guardado cambios; confirma y aplica.
+- Repite el archivo: ambos vínculos se reconocen, el nuevo aparece sin cambios y el antiguo sigue protegido. No aparece ninguna asistencia nueva ni viaje público para el partido importado.
+- En una copia local del JSON cambia la fecha y el resultado del segundo registro, y usa otra revisión sintética de 40 caracteres hexadecimales. Genera el preview, confirma su vínculo al mismo partido del 10/10/2030 y actualízalo: debe mostrar una actualización propuesta. Aplica y comprueba que conserva su UUID. No confirmes crear otro partido.
+- Para ese partido, marca asistencia en `/admin`, añade notas y distinción y guarda su enlace. Reimporta una versión con datos cambiados: sin editar hechos locales todavía, debe proponer actualizarlos conservando el enlace y recuerdos. Después corrige sus hechos con 4a y repite: debe quedar protegido y conservar todos esos hechos.
+- En otra copia elimina `date` y `score` del segundo registro. Vincúlalo al mismo partido; no debe proponer borrar fecha/marcador conocidos. Un campo desconocido no debe convertirse en 0–0.
+- Genera un preview, edita un partido candidato en otra pestaña y trata de aplicar el preview anterior: debe rechazarlo sin guardar el lote. Revisa también que una cuenta ajena no pueda abrir la importación ni operar.
+- Revisa en móvil/escritorio los cinco estados, foco, nombres de candidatos, diferencias y mensajes. Para temporadas futuras crea referencias sintéticas distintas y repite el flujo. Conserva testing como entorno de QA; no uses este ejemplo en datos reales.
+
+La migración nueva es aditiva; se probó sobre testing existente. No hay migraciones automáticas en requests/build ni cambios en `neon_auth`. No se ha migrado development o producción. Para preparar development posteriormente, verifica su destino no productivo antes de ejecutar `npm run db:migrate`.
 
 ## Migraciones y datos sintéticos
 
@@ -142,6 +232,7 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 | `/auth/sign-in` | Acceso con Google. |
 | `/auth/account` | Sesión propia, identificador para configurar la allowlist y cierre de sesión. |
 | `/admin` | Partidos locales, filtros por temporada/competición, asistencia y referencias; requiere identidad configurada. |
+| `/admin/import` | Obtención directa por rango, preview global, referencias propuestas y lotes reanudables; archivo local avanzado. Solo propietario. |
 
 Abre los detalles desde los enlaces de las listas: `[slug]` es un parámetro, no una URL literal. El seed ofrece `/stadiums/estadio-del-corcho-ejemplo` y un viaje de información incompleta en `/trips/viaje`. Los nombres/fechas corregidos no regeneran slugs. Un estadio no visitado o un viaje inexistente no es público; muestra 404.
 
@@ -198,6 +289,6 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-**Milestone 3 implementado; pendiente de configurar las identidades reales y completar la aceptación manual de Google.** La edición de referencias y los límites de autorización se verifican automáticamente con datos sintéticos. No integrar hasta confirmar la comprobación manual anterior. Milestone 4a (gestión de partidos/asistencias) no se ha iniciado; importaciones, fotos y mapa interactivo siguen pendientes.
+Milestones 1–4c completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. 4d no se ha iniciado.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.

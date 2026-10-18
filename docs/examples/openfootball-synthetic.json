@@ -1,0 +1,7 @@
+{
+  "name": "Archivo sintético para QA; no representa partidos reales",
+  "matches": [
+    { "round": "Jornada de prueba", "date": "2030-02-01", "team1": "Club Norte (ejemplo)", "team2": "Elche CF", "score": { "ft": [1, 2] } },
+    { "round": "Jornada de prueba", "date": "2030-10-10", "team1": "Elche CF", "team2": "Club Sur (ejemplo)", "score": { "ft": [1, 0] } }
+  ]
+}

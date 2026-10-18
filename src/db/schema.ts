@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, date, doublePrecision, index, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, date, doublePrecision, index, integer, jsonb, pgTable, text, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
 import { provinces } from "../lib/geography";
 
 const timestamps = () => ({
@@ -86,3 +86,41 @@ export const attendance = pgTable("attendance", {
   isSpecial: boolean("is_special").default(false).notNull(),
   ...timestamps(),
 }, (t) => [check("attendance_slug_format", sql`${t.slug} ~ ${sql.raw(`'${slugPattern}'`)}`)]);
+
+// One accepted normalized record version links to a stable local match UUID.
+// Revisions retain observations of the same version, never replace local identity.
+export const matchSources = pgTable("match_sources", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "restrict" }),
+  provider: text("provider").notNull(),
+  externalFixtureId: text("external_fixture_id").notNull(),
+  repository: text("repository").notNull(),
+  path: text("path").notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  revisions: text("revisions").array().notNull(),
+  importedAt: timestamp("imported_at", { withTimezone: true }).defaultNow().notNull(),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  unique("match_sources_identity").on(t.provider, t.externalFixtureId),
+  index("match_sources_match_idx").on(t.matchId),
+  check("match_sources_provider", sql`${t.provider} = 'openfootball'`),
+  check("match_sources_hashes", sql`${t.fingerprint} ~ '^[a-f0-9]{64}$' and ${t.externalFixtureId} ~ '^[a-f0-9]{64}$'`),
+  check("match_sources_provenance", sql`${t.repository} in ('openfootball/football.json', 'openfootball/espana') and length(${t.path}) between 1 and 200 and cardinality(${t.revisions}) > 0`),
+]);
+
+
+// Receipts are committed only with an explicitly confirmed global-import batch.
+// They make a retry after a lost response return the same accepted outcome.
+export const importBatches = pgTable("import_batches", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  planId: uuid("plan_id").notNull(),
+  batchIndex: integer("batch_index").notNull(),
+  planHash: text("plan_hash").notNull(),
+  afterSnapshot: text("after_snapshot").notNull(),
+  result: jsonb("result").$type<{ created: number; updated: number; protectedCount: number; skipped: number }>().notNull(),
+  appliedAt: timestamp("applied_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  unique("import_batches_plan_index").on(t.planId, t.batchIndex),
+  check("import_batches_index", sql`${t.batchIndex} >= 0`),
+  check("import_batches_hashes", sql`${t.planHash} ~ '^[a-f0-9]{64}$' and ${t.afterSnapshot} ~ '^[a-f0-9]{64}$'`),
+]);

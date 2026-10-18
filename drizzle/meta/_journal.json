@@ -8,6 +8,20 @@
       "when": 1792326928505,
       "tag": "0000_spotty_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792335866942,
+      "tag": "0001_hesitant_longshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792353379040,
+      "tag": "0002_panoramic_darkhawk",
+      "breakpoints": true
     }
   ]
 }

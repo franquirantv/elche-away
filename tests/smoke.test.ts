@@ -328,3 +328,129 @@ test("fixture browser and actual fixture actions enforce owner authorization and
     await pool.end();
   }
 });
+
+test("import page and all upload/preview/apply actions authorize independently; owner reviews before writing", async () => {
+  const { matchSources } = await import("../src/db/schema");
+  const { digest } = await import("../src/server/import-input");
+  const { ELCHE_CLUB_ID } = await import("../src/lib/identity");
+  const { encodeReply, createFromReadableStream } = createRequire(import.meta.url)("next/dist/compiled/react-server-dom-turbopack/client.node") as {
+    encodeReply: (value: unknown[]) => Promise<string | FormData>;
+    createFromReadableStream: (stream: ReadableStream<Uint8Array>, options: { serverConsumerManifest: { moduleMap: object; serverModuleMap: object; moduleLoading: null } }) => Promise<{ a?: Promise<{ message: string; token?: string; input?: unknown }> }>;
+  };
+  const page = await fetch(`${origin}/admin/import`, { headers: { Cookie: identity.ownerCookie } });
+  assert.match(await page.text(), /Importar partidos/);
+  assert.match(await (await fetch(`${origin}/admin/import`, { headers: { Cookie: identity.otherCookie } })).text(), /Acceso restringido/);
+  const action = await actionId("importFixtures");
+  async function submit(form: FormData, cookie: string) {
+    const response = await fetch(`${origin}/admin/import`, { method: "POST", redirect: "manual", headers: { "Next-Action": action, Origin: origin, Cookie: cookie }, body: await encodeReply([form]) });
+    const text = await response.text();
+    // React may encode a long signed token as a separate text chunk. Decode
+    // the real Flight protocol instead of treating each line as plain JSON.
+    let state;
+    if (text.includes('"token"')) {
+      const stream = new Response(text).body!;
+      const root = await createFromReadableStream(stream, { serverConsumerManifest: { moduleMap: {}, serverModuleMap: {}, moduleLoading: null } });
+      state = await root.a;
+    }
+    return { text, state };
+  }
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const path = `2037-38/http-${randomUUID()}.json`;
+  try {
+    const beforeMatches = await db.select().from(matches).orderBy(matches.id);
+    const beforeSources = await db.select().from(matchSources).orderBy(matchSources.id);
+    for (const cookie of ["", identity.otherCookie]) {
+      for (const intent of ["inspect", "preview", "apply"]) {
+        const form = new FormData(); form.set("intent", intent); form.set("userId", identity.ownerId);
+        const result = await submit(form, cookie);
+        assert.match(result.text, /No tienes permiso|auth\/sign-in/);
+      }
+    }
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), beforeMatches);
+    assert.deepEqual(await db.select().from(matchSources).orderBy(matchSources.id), beforeSources);
+    const record = { date: "2037-10-15", team1: "Elche CF", team2: "Rival HTTP sintético", score: { ft: [2, 1] } };
+    const input = { repository: "openfootball/football.json", path, revision: "d".repeat(40), content: JSON.stringify([record]), format: "json", seasonId: fixtureIds.season, competitionId: fixtureIds.league, elcheName: "Elche CF", offset: 0, resultsConfirmed: true, mappings: {}, targets: {} };
+    const upload = new FormData();
+    for (const [key, value] of Object.entries(input)) if (!["content", "mappings", "targets", "resultsConfirmed"].includes(key)) upload.set(key, String(value));
+    upload.set("resultsConfirmed", "yes"); upload.set("intent", "inspect"); upload.set("file", new File([input.content], "synthetic.json", { type: "application/json" }));
+    const inspected = await submit(upload, identity.ownerCookie);
+    assert.match(inspected.text, /Archivo leído sin guardar/);
+    const form = new FormData(); form.set("intent", "preview"); form.set("input", JSON.stringify(input));
+    form.set("club-0", ELCHE_CLUB_ID); form.set("club-1", fixtureIds.north); form.set("target-0", "new");
+    const reviewed = await submit(form, identity.ownerCookie);
+    assert.ok(reviewed.state?.token, reviewed.text.slice(-1500));
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), beforeMatches);
+    const apply = new FormData(); apply.set("intent", "apply"); apply.set("confirmApply", "yes"); apply.set("token", reviewed.state.token + "tamper");
+    assert.match((await submit(apply, identity.ownerCookie)).text, /modificado/);
+    apply.set("token", reviewed.state.token);
+    assert.match((await submit(apply, identity.otherCookie)).text, /No tienes permiso/);
+    assert.match((await submit(apply, identity.ownerCookie)).text, /Lote aplicado: 1 nuevos/);
+    const sources = await db.select().from(matchSources).where(eq(matchSources.path, path));
+    assert.equal(sources.length, 1);
+    assert.equal(sources[0].fingerprint, digest({ home: record.team1, away: record.team2, playedOn: record.date, homeScore: 2, awayScore: 1, phase: null }));
+    const publicTrips = await listTrips(db);
+    assert.ok(publicTrips.every((trip) => trip.playedOn !== record.date));
+  } finally {
+    const sources = await db.select().from(matchSources).where(eq(matchSources.path, path));
+    await db.delete(matchSources).where(eq(matchSources.path, path));
+    for (const source of sources) await db.delete(matches).where(eq(matches.id, source.matchId));
+    await pool.end();
+  }
+});
+
+test("direct-import actions require owner access before acquisition, and signed global approval controls batch writes", async () => {
+  const { newGlobalPlan, previewGlobalImport } = await import("../src/db/global-import");
+  const { signGlobalPlan } = await import("../src/server/global-review");
+  const { importBatches, matchSources } = await import("../src/db/schema");
+  const { encodeReply } = createRequire(import.meta.url)("next/dist/compiled/react-server-dom-turbopack/client.node") as { encodeReply: (value: unknown[]) => Promise<string | FormData> };
+  await fetch(`${origin}/admin/import`, { headers: { Cookie: identity.ownerCookie } });
+  const action = await actionId("directImport");
+  async function submit(values: Record<string, string>, cookie: string) {
+    const form = new FormData(); for (const [name, value] of Object.entries(values)) form.set(name, value);
+    const response = await fetch(`${origin}/admin/import`, { method: "POST", redirect: "manual", headers: { "Next-Action": action, Origin: origin, Cookie: cookie }, body: await encodeReply([form]) });
+    return { text: await response.text() };
+  }
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const path = `2018-19/global-http-${randomUUID()}.json`;
+  let planId: string | undefined;
+  const createdRefs: { kind: "clubs" | "seasons" | "competitions"; id: string }[] = [];
+  try {
+    const before = await db.select().from(matches).orderBy(matches.id);
+    const receiptCount = (await db.select().from(importBatches)).length;
+    for (const cookie of ["", identity.otherCookie]) for (const intent of ["check", "preview", "resume", "apply"]) {
+      assert.match((await submit({ intent, startYear: "2017", endYear: "2018", userId: identity.ownerId }, cookie)).text, /No tienes permiso|auth\/sign-in/);
+    }
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), before);
+    assert.equal((await db.select().from(importBatches)).length, receiptCount);
+    const acquired = { startYear: 2018, endYear: 2018, coverage: [], revisions: { "openfootball/football.json": "a".repeat(40) }, files: [{ repository: "openfootball/football.json" as const, revision: "a".repeat(40), path, year: 2018, competition: "Competición HTTP global sintética", records: [{ home: "Elche CF", away: "Rival global HTTP sintético", playedOn: "2018-09-12", homeScore: 2, awayScore: 1, phase: null }] }] };
+    const plan = await newGlobalPlan(db, acquired, true); planId = plan.id;
+    let preview = await previewGlobalImport(db, plan);
+    for (const b of preview.batches) for (const r of b.rows) plan.targets[r.sourceId] = "new";
+    preview = await previewGlobalImport(db, plan);
+    assert.equal(preview.applicable, true);
+    for (const ref of plan.references.filter((r) => r.choice === "new")) createdRefs.push({ kind: ref.kind, id: ref.id });
+    const token = signGlobalPlan(plan, "synthetic-cookie-secret-only-for-local-tests-123456");
+    const reviewValues: Record<string, string> = { intent: "preview", token };
+    plan.references.forEach((ref, i) => { reviewValues[`ref-${i}`] = ref.choice; });
+    for (const [sourceId, target] of Object.entries(plan.targets)) reviewValues[`target-${sourceId}`] = target;
+    assert.match((await submit(reviewValues, identity.ownerCookie)).text, /"resultsConfirmed":false/);
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), before);
+    assert.match((await submit({ intent: "apply", token }, identity.ownerCookie)).text, /Confirma el preview global/);
+    assert.deepEqual(await db.select().from(matches).orderBy(matches.id), before);
+    assert.match((await submit({ intent: "apply", token: token + "tamper", confirmGlobal: "yes" }, identity.ownerCookie)).text, /modificado/);
+    const applied = await submit({ intent: "apply", token, confirmGlobal: "yes" }, identity.ownerCookie);
+    assert.match(applied.text, /Lote 1 aplicado/);
+    assert.match((await submit({ intent: "apply", token, confirmGlobal: "yes" }, identity.ownerCookie)).text, /ya aplicado/);
+    assert.equal((await db.select().from(matchSources).where(eq(matchSources.path, path))).length, 1);
+    assert.equal((await db.select().from(importBatches).where(eq(importBatches.planId, plan.id))).length, 1);
+    assert.match((await submit({ intent: "resume", token }, identity.ownerCookie)).text, /Estado recuperado/);
+  } finally {
+    const links = await db.select().from(matchSources).where(eq(matchSources.path, path));
+    await db.delete(matchSources).where(eq(matchSources.path, path));
+    for (const link of links) await db.delete(matches).where(eq(matches.id, link.matchId));
+    if (planId) await db.delete(importBatches).where(eq(importBatches.planId, planId));
+    const { seasons, competitions } = await import("../src/db/schema");
+    for (const ref of createdRefs) { const table = { clubs, seasons, competitions }[ref.kind]; await db.delete(table).where(eq(table.id, ref.id)); }
+    await pool.end();
+  }
+});

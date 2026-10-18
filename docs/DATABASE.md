@@ -1,6 +1,6 @@
 # Database
 
-Milestone 2 implements the seven core tables in `src/db/schema.ts` with a reviewed initial migration under `drizzle/`. Import mappings and photos remain planned. PostgreSQL with Drizzle. Domain tables use UUID primary keys and created/updated timestamps (`timestamptz`); application writes maintain updated time. Avoid database extensions unless required.
+Milestone 2 implements the seven core tables in `src/db/schema.ts` with a reviewed initial migration under `drizzle/`. Milestone 4c adds import mappings; photos remain planned. PostgreSQL with Drizzle. Domain tables use UUID primary keys and created/updated timestamps (`timestamptz`); application writes maintain updated time. Avoid database extensions unless required.
 
 ## Entities and domain decision
 
@@ -55,11 +55,13 @@ No club-stadium join table: clubs associated with a venue in this archive are de
 
 Nullable match foreign keys use ON DELETE RESTRICT; unknown never means silently deleted. Referenced clubs, stadiums, competitions and seasons require correction/reassignment before deletion; tier deletion is restricted by seasons. attendance.match_id is a required FK to matches with ON DELETE RESTRICT. Unmarking deletes attendance after confirmation (and future photo cleanup), retaining fixture facts and import identities. Its public trip link then returns 404; re-attendance is a new personal record with a newly generated slug. No slug-history system.
 
-Do not delete a match with attendance or external identity mappings. Routine removal is unmarking attendance, not deleting fixture history. Explicit admin deletion of an incorrectly imported fixture must first remove its mappings and warn that re-import can recreate it. No automatic source-driven deletions, merge framework or soft-delete system.
+Do not delete a match with attendance or external identity mappings. Routine removal is unmarking attendance, not deleting fixture history. An imported fixture is protected from deletion both by the admin write helper and the source FK. 4c does not expose unlink/delete of provenance; any future removal flow must separately review the risk of recreation on reimport. No automatic source-driven deletions, merge framework or soft-delete system.
 
 ## External identities and synchronization (import milestone)
 
-Add match_sources at the import milestone, not Foundation: id, match_id (required FK, RESTRICT), provider (namespaced source key), external_fixture_id (opaque text), imported_at, last_synced_at. Unique (provider, external_fixture_id); index match_id. A match can have several source identities, including old/new provider IDs. Timestamps describe successful accepted imports/syncs, not match dates. Stable local UUIDs are never replaced by provider IDs.
+Milestone 4c adds `match_sources`: id, match_id (required FK, RESTRICT), provider (`openfootball`), external_fixture_id (computed source-version key, not a provider match ID), repository, path, fingerprint, revisions (nonempty array of accepted Git revisions), imported_at and last_synced_at. Unique (provider, external_fixture_id); index match_id. `fingerprint` hashes a normalized record in a fixed field order; external_fixture_id hashes repository, path and that normalized record. Revision is excluded from identity so an identical record in a later revision resolves the existing mapping; every accepted revision is retained. The same record in another path/repository is unseen and requires confirmation. A changed normalized record creates a new version mapping only after owner confirmation; older mappings remain linked to the same local UUID.
+
+No raw file or personal metadata is stored in the provenance table. Hashes identify source record versions only, never permanent football identity. The admin supplies repository/path/revision for the uploaded local file; the application validates syntax but does not fetch GitHub to certify the claimed revision.
 
 Deduplication order:
 
@@ -70,7 +72,7 @@ Deduplication order:
 
 Map external clubs, venues, competitions and seasons to local IDs at the import boundary. Existing local reference names, crest paths, venue geography and season tiers are not automatically overwritten by sync; proposed reference corrections require owner review. Start with explicit per-import mappings and owner confirmation; do not add a generic external-entity identity framework unless repeated reconciliation proves it useful. Unknown stadium remains null; never create a venue from club identity. Mapping rounds/tier labels must not turn a cup into a league or overwrite season tier without review.
 
-Local corrections are deliberately simple: editing fixture facts sets facts_locked=true, preserving all fixture facts on later syncs. Attendance edits do not lock fixture facts. For a locked fixture, offer explicit reviewed source replacement (or skip), then deliberately unlock if desired. No per-field provenance, raw payload archive or override tables initially. Import actions never change attendance, notes, special status, slugs or photos; omission from a provider response never deletes local records. Provider failure leaves existing records usable.
+Local corrections are deliberately simple: editing fixture facts sets facts_locked=true, preserving all fixture facts on later syncs. Attendance edits do not lock fixture facts. The 4c importer never replaces or unlocks a locked fixture: linking records provenance only, or the owner skips the record. Further corrections use 4a. No per-field provenance, raw payload archive or override tables initially. Import actions never change attendance, notes, special status, slugs or photos; omission from a provider response never deletes local records. Provider failure leaves existing records usable.
 
 ## Indexes and derived data
 
@@ -105,3 +107,25 @@ Neon Auth owns users, accounts and sessions under its managed `neon_auth` schema
 ## Milestone 4a local management
 
 No schema migration is needed. Manual creates/corrections set `facts_locked=true`. Attendance writes never update fixture facts; fixture writes never change personal notes, special status or existing slugs. Writes lock the parent match within a transaction, serializing attendance creation/removal and match deletion. Unmarking removes attendance only; match deletion refuses attended fixtures. Plausible duplicates (equal date, sides, season and competition, including nulls) require explicit confirmation rather than a uniqueness constraint. Attendance slug collisions use the existing unique constraint and bounded retries.
+
+
+## Milestone 4c import acceptance and concurrency
+
+The bounded preview covers up to 40 Elche records from a file of at most 350000 UTF-8 bytes / 2000 records. References are mapped explicitly for each batch. Absent incoming fields preserve known local facts; unknown incoming status preserves a known status. Imported fixtures have `facts_locked=false`; later 4a edits set it true. Final-result interpretation requires the owner to confirm played scores including extra time and excluding shootouts; otherwise status stays unknown. Nothing infers attendance or stadium from a fixture/team.
+
+Every unseen record version needs an explicit target: existing candidate, new fixture or skip. Candidates include the selected season and incomplete fixtures without a season; previous source mappings resolve even across a locally corrected season. Date, teams and round only suggest conflicts, never establish a unique match. The preview distinguishes new, unchanged, update, protected and conflict. If teams change while incoming goals are absent and local goals are known, block apply as a manual conflict rather than reorienting the old result. Two rows cannot target the same existing local match in one batch; duplicate normalized source rows are rejected.
+
+Apply verifies a server-signed preview with a 30-minute expiry, repeats domain/reference validation and compares a fresh snapshot of candidates, references and source links. It locks `matches` and `match_sources` in SHARE ROW EXCLUSIVE mode inside the transaction, serializing applies with manual writes. A stale preview cannot apply. The short bounded batch is all-or-nothing: failures roll back fixtures and links together; generate a fresh preview to retry or continue from the displayed next offset. Omitted rows and records absent from a newer source never delete local data. History and attendance stay independent.
+
+Migration `0001_hesitant_longshot.sql` is additive, needs no backfill and leaves the seven existing domain tables untouched. Apply it explicitly before running this code; rolling the application back can leave the unused table in place. Do not drop mappings or reset data to roll back an import: use reviewed local corrections. Auth schema is unchanged.
+
+
+## Global import receipts and proposed references (4c revision)
+
+Migration `0002_panoramic_darkhawk.sql` adds `import_batches` only: UUID id, plan_id, batch_index, plan_hash, after_snapshot, JSON result (operational batch outcome) and applied_at. Unique (plan_id, batch_index) makes a committed batch retry return the same outcome without repeating reference, match or source writes. These are execution receipts, not stored domain statistics or an unattended job queue. The hash binds the complete frozen global decisions; a different plan cannot claim an old receipt.
+
+The global preview has no database writes. Virtual reference IDs become real only in confirmed batch transactions, with explicit club/season/competition creation; season tiers and venue references remain untouched/null. IDs are frozen in the signed plan, reused across batches and recovery. Rechecks use existing exact references; ambiguous names require manual selection. Multiple source spellings may be explicitly assigned to one proposed new reference before any write; the shared frozen UUID is created once. No reference name, slug, crest, geography or tier is overwritten by the importer. Historical exact fixture links also help preserve club mappings after local reference renames.
+
+A global apply locks reference tables, matches, match_sources and import_batches in SHARE ROW EXCLUSIVE mode, checks the approved checkpoint, creates that batch's references, then invokes the existing reconciliation engine. The transaction commits its receipt with the resulting checkpoint. A failed batch rolls back all its writes; earlier receipts and mutations remain. A lost response can safely replay the original signed request: it reads the receipt without writing again, and the next batch still validates its checkpoint. Progress recovery requires an authorized explicit action and never applies anything by itself. No batches can be skipped/reordered, and unresolved later decisions prevent initial global approval.
+
+Snapshots cover fixture/reference/source state (not attendance notes); legitimate local edits during a stopped execution require a new global review. Resume uses the last committed checkpoint, not an unconditional fresh baseline. Receipt schema is additive, needs no backfill, and can remain in place when rolling application code back. Do not delete receipts or source links to retry an import. No production migration is authorized by this feature.
