@@ -247,9 +247,6 @@ test("fixture management filters locally, locks corrections and isolates attenda
 
 test("home summary derives totals, coverage and oriented finished results only from attendance", async () => {
   await rolledBack(async (tx) => {
-    // Isolate attendance without removing any owner data outside this rollback.
-    await tx.delete(attendance);
-    await seedSyntheticData(tx);
     assert.deepEqual(await readHomeSummary(tx), { trips: 5, stadiums: 2, knownVenues: 4, knownResults: 2, wins: 1, draws: 1, losses: 0 });
     for (const status of ["unknown", "scheduled", "postponed", "cancelled", "abandoned"] as const) {
       await tx.update(matches).set({ status, homeScore: 0, awayScore: 0 }).where(eq(matches.id, fixtureIds.homeMatch));
