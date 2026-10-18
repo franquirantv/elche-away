@@ -10,7 +10,7 @@ import { createDatabase } from "../src/db/connection";
 import { readHomeSummary, findTrip, listTrips } from "../src/db/queries";
 import { fixtureIds } from "../src/db/fixtures";
 import { eq } from "drizzle-orm";
-import { matches, clubs } from "../src/db/schema";
+import { matches, clubs, stadiums } from "../src/db/schema";
 import { authFixture } from "./auth-fixture";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -479,4 +479,26 @@ test("map serves usable stadium links and coordinate coverage without tiles or J
   assert.match(html, /href="\/stadiums\/campo-del-recuerdo-ejemplo"/);
   assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
   assert.match(html, /Todavía no hay coordenadas/);
+  assert.match(html, /class="stadium-map"/);
+  assert.match(html, /aria-label="Seleccionar estadio visitado"/);
+  assert.match(html, /Ver historial del estadio/);
+  assert.doesNotMatch(html, /Activar mapa/);
+});
+
+test("map serves the carousel with locations and keeps unlocated visited stadiums", async () => {
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const [before] = await db.select().from(stadiums).where(eq(stadiums.id, fixtureIds.ground));
+  try {
+    await db.update(stadiums).set({ latitude: 38.2, longitude: -0.7 }).where(eq(stadiums.id, fixtureIds.ground));
+    const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+    assert.match(html, /Estadios con coordenadas: 1 de 2/);
+    assert.match(html, /Sin coordenadas: 1/);
+    assert.match(html, /Ciudad de ejemplo/);
+    assert.equal((html.match(/class="map-card"/g) ?? []).length, 2);
+    assert.equal((html.match(/class="map-card-history"/g) ?? []).length, 2);
+    assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+  } finally {
+    await db.update(stadiums).set({ latitude: before.latitude, longitude: before.longitude }).where(eq(stadiums.id, before.id));
+    await pool.end();
+  }
 });

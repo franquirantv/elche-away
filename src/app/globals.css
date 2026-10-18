@@ -128,10 +128,35 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .map-coverage { margin-block: 24px 12px; }
 .map-section { margin-block: 24px 40px; }
 .map-section > p { line-height: 1.7; }
-.stadium-map { height: clamp(300px, 55svh, 560px); width: 100%; margin-top: 20px; isolation: isolate; border: 1px solid #9aaa9e; }
-.map-attribution { background: white; padding: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.stadium-map { height: 100%; width: 100%; isolation: isolate; }
+.map-attribution { position: absolute; z-index: 2; top: 8px; right: 8px; max-width: calc(100% - 80px); background: white; padding: 4px 8px; font-size: 11px; overflow-wrap: anywhere; }
 .map-attribution a { text-decoration: underline; }
 .stadium-marker { display: grid; place-items: center; color: #155d43; font-size: 28px; text-shadow: 0 0 3px white, 0 0 6px white; }
 .stadium-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
+.stadium-map .leaflet-popup-content { max-width: calc(100vw - 130px); overflow-wrap: anywhere; }
 .stadium-map .leaflet-popup-content a { text-decoration: underline; font-weight: 700; }
 #stadium-list { scroll-margin-top: 24px; }
+
+.map-page { padding-top: 20px; }
+.map-page .map-section { margin-top: 12px; }
+.map-page .page-heading h1 { font-size: clamp(36px, 5vw, 56px); margin-bottom: 8px; }
+.map-page .page-heading .eyebrow { margin-bottom: 8px; }
+.map-page .map-coverage { margin-block: 12px 6px; font-size: 14px; }
+.map-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 10px; font-size: 13px; }
+.map-toggle { min-height: 44px; padding: 8px 12px; border: 1px solid #9aaa9e; border-radius: 4px; flex-shrink: 0; }
+.map-stage { position: relative; height: clamp(500px, 70svh, 900px); border: 1px solid #9aaa9e; background: #e6ebe6; isolation: isolate; }
+.map-carousel { position: absolute; z-index: 1; bottom: 12px; left: 0; right: 0; display: flex; gap: 12px; overflow-x: auto; padding: 8px 16px 12px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; touch-action: pan-x pan-y; list-style: none; }
+.map-card { max-height: 195px; overflow-y: auto; flex: 0 0 270px; border: 2px solid white; border-radius: 8px; background: white; box-shadow: 0 2px 12px #19362c30; scroll-snap-align: center; overflow-wrap: anywhere; }
+.map-card[data-selected="true"] { border-color: #155d43; background: #f0f7ef; }
+.map-card-select { display: grid; gap: 4px; width: 100%; padding: 12px 14px 4px; text-align: left; font-size: 12px; line-height: 1.4; cursor: pointer; }
+.map-card-select:disabled { opacity: 1; cursor: default; }
+.map-card-name { font-size: 16px; font-weight: 700; }
+.map-card-history { display: block; min-height: 44px; padding: 10px 14px; text-decoration: underline; font-size: 13px; }
+.map-card :focus-visible { outline-offset: -4px; border-radius: 6px; }
+@media (max-width: 767px) {
+  .map-toolbar { font-size: 12px; gap: 12px; }
+  .map-toggle { max-width: 130px; flex-shrink: 0; }
+  .map-stage { height: max(500px, 65svh); }
+  .map-card { flex-basis: 245px; }
+}
+@media (prefers-reduced-motion: reduce) { .map-carousel { scroll-behavior: auto; } }

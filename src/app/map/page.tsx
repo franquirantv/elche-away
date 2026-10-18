@@ -10,14 +10,17 @@ export const metadata: Metadata = { title: "Mapa" };
 
 export default async function MapPage() {
   const stadiums = await getVisitedStadiums();
-  if (!stadiums.length) return <EmptyState eyebrow="03 / Las chinchetas" title="Mapa" description="Del mapa de corcho a los lugares donde seguimos al Elche." message="Todavía no hay estadios visitados publicados." />;
-  const markers: MapStadium[] = stadiums.flatMap((stadium) => stadium.latitude === null || stadium.longitude === null ? [] : [{ slug: stadium.slug, name: stadium.name, latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial }]);
+  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial }));
+  const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
   const tiles = mapTileConfig();
-  return <div className="page-content">
-    <header className="page-heading"><p className="eyebrow">03 / Las chinchetas</p><h1>Mapa</h1><p className="lead">Del mapa de corcho a los lugares donde seguimos al Elche.</p></header>
-    <p className="map-coverage">Estadios con coordenadas: {markers.length} de {stadiums.length}. Sin coordenadas: {stadiums.length - markers.length}.</p>
+  return <div className="page-content map-page">
+    <header className="page-heading"><h1>Mapa</h1></header>
+    <p className="map-coverage">Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
     <a href="#stadium-list" className="inline-link">Ir a la lista de estadios</a>
-    {markers.length > 0 && tiles ? <StadiumMap stadiums={markers} tiles={tiles} /> : <p className="map-section">{markers.length ? "El mapa no está disponible." : "Todavía no hay coordenadas para mostrar marcadores."} Puedes usar la lista de estadios.</p>}
+    <noscript><p>El mapa interactivo necesita JavaScript. Puedes consultar la cobertura y los enlaces de la lista de estadios.</p></noscript>
+    {tiles ? <StadiumMap stadiums={mapStadiums} tiles={tiles} /> : <p className="map-section">El mapa no está disponible. Puedes usar la lista de estadios.</p>}
+    {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
+    {!stadiums.length && <EmptyState eyebrow="Las chinchetas" title="Todavía no hay estadios" description="El mapa espera tus visitas." message="Todavía no hay estadios visitados publicados." />}
     <section id="stadium-list" aria-labelledby="stadium-list-title">
       <h2 id="stadium-list-title" className="group-title">Estadios visitados</h2>
       <ul className="stadium-grid">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">

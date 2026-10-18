@@ -293,7 +293,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 sigue pendiente.
+Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 está implementado en su rama; sigue pendiente de aceptación manual.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
 
@@ -307,7 +307,7 @@ Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correct
 
 ## Mapa (Milestone 5)
 
-Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. Solo se solicitan tiles al activar el mapa.
+Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. Un carrusel superpuesto conecta tarjetas y pines.
 
 Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
 
@@ -324,12 +324,14 @@ La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución d
 
 1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/map` en escritorio y móvil (o viewport de 390 px).
 2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar `/map`. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas».
-3. Activar el mapa: un marcador por estadio aunque haya varias asistencias; abrir el marcador y seguir el enlace a su historial. Los viajes especiales muestran estrella y texto. Un estadio sin asistencias no debe aparecer.
-4. En escritorio comprobar botones de zoom, navegación por teclado, foco visible, enlaces y atribución. La rueda permite desplazar la página. En móvil comprobar pulsación de marcador, zoom con dos dedos, orientación y desactivar el mapa para desplazarse sin capturas táctiles. Verificar que no hay desbordamiento horizontal.
-5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red del navegador antes de activar el mapa: debe aparecer el aviso de fallo y todos los enlaces de la lista deben seguir funcionando. Quitar el bloqueo y desactivar/activar para reintentar. No ejecutar barridos automatizados de tiles reales.
-6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, sin activar el mapa no se solicitan tiles; al activarlo comprobar HTTPS y Referer. La atribución permanece visible bajo el mapa a cualquier zoom.
+3. Al entrar debe verse el mapa grande encuadrando toda la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o eligiendo su tarjeta.
+4. En escritorio, pulsar una tarjeta: debe acercarse suavemente a su estadio, abrir información y marcar su tarjeta. Pulsar otro pin: debe seleccionar y llevar su tarjeta a la vista sin desplazar la página. Comprobar nombre, localidad, visitas y enlace «Ver historial del estadio». Probar Tab, Enter, zoom y foco visible. En móvil (390 px y dispositivo real), recorrer horizontalmente las tarjetas sin arrastrar el mapa, pulsar tarjeta y pin, ampliar con dos dedos, girar orientación y usar «Pausar interacción» para desplazar la página. La rueda de escritorio desplaza la página. No debe haber desbordamiento horizontal de la página; la atribución no queda cubierta. Con movimiento reducido, los cambios de selección no deben animarse.
+5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar `/map`: debe aparecer el aviso de fallo y los enlaces de tarjetas y lista deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, comprobar HTTPS y Referer en los tiles; sin JavaScript no se solicitan tiles. La atribución permanece visible en la esquina superior derecha del mapa a cualquier zoom, fuera del carrusel.
 7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío.
 
 La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
 
 Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lint`, `npm run typecheck` y `npm test` correctos (55/55, sin omisiones; base temporal eliminada). `npm run build` con Turbopack falló por permisos al abrir un puerto local durante el procesamiento CSS; `npm run build -- --webpack` pasó. Aceptación manual pendiente.
+
+Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La aceptación táctil en un dispositivo real y la cartografía visible siguen pendientes del propietario.
