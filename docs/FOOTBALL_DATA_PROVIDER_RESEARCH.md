@@ -1,91 +1,90 @@
-# 4b — Investigación y recomendación de proveedor de fútbol
+# 4b — Fuentes de fixtures con presupuesto de 0 €
 
-Fecha de consulta: **18 de octubre de 2026**. Estado: investigación terminada; **proveedor pendiente de aprobación del propietario**. No hay contratación, cuenta, credenciales, llamadas autenticadas, integración ni cambios de esquema. 4c no está autorizado por este documento.
+Revisión: **18 de octubre de 2026**. Investigación reabierta por requisito del propietario: **0 € para obtener/importar fixtures**, también en actualizaciones ocasionales. Recomendación pendiente de aprobación. Sustituye la propuesta anterior de Sportmonks, conservada en el historial Git. No se han creado cuentas, contratado servicios, añadido credenciales ni importado datos. 4c sigue pendiente.
 
-## Decisión propuesta
+## Recomendación para aprobar o rechazar
 
-**Recomendar Sportmonks como candidato preferente, con condiciones previas a 4c.** Su permiso explícito de almacenamiento y uso de los datos en un producto encaja mejor con un archivo público persistido en PostgreSQL que las otras opciones estudiadas. Su mayor coste frente a API-Football se justifica por ese encaje documental, no por necesitar estadísticas o datos en directo.
+**Usar OpenFootball como fuente principal de archivos estáticos CC0 y completar las lagunas mediante 4a.** Preferir JSON cuando exista y esté comprobado; recurrir a sus archivos Football.TXT para ediciones no disponibles en JSON. CSV es una alternativa de formato, no un requisito ni una nueva fuente de derechos.
 
-**No hay todavía un proveedor acreditado para todos los requisitos.** Antes de aprobar la importación deben quedar resueltas por escrito la conservación/publicación tras cancelar o cambiar de proveedor y la cobertura por temporada, especialmente Segunda B y ascensos de 2018. Aprobar este candidato de forma condicionada no equivale a aprobar 4c, una suscripción o una reducción de alcance.
+La combinación propuesta cuesta **0 € en adquisición de datos**, no necesita cuenta ni token y permite conservar los datos localmente. No promete el histórico completo desde 2017/18: esa campaña de Segunda B, playoffs y varios partidos de Copa requieren trabajo manual. El propietario ha admitido expresamente esta combinación de importación parcial y edición manual. Sigue pendiente aprobar esta fuente y sus lagunas antes de encargar 4c.
 
-Alternativas: API-Football es el segundo candidato técnico y más barato, pero no resuelve los derechos de publicación; football-data.org no encaja con la independencia permanente del archivo tras una baja. Si Sportmonks no satisface las condiciones, corresponde volver al propietario con las carencias y decidir explícitamente otro proveedor o un alcance de importación reducido. Los flujos manuales de 4a siguen utilizables; no se declara por ello una versión final exclusivamente manual.
+PostgreSQL permanece como única fuente de verdad para lecturas públicas y navegación administrativa. Las actualizaciones serían descargas puntuales revisadas por el propietario, nunca consultas externas en runtime, sincronización continua o un servicio necesario para publicar el archivo. La recomendación no depende de conseguir después una API de pago, una prueba temporal o una autorización comercial.
 
-## Necesidades y método
+## Alcance y método
 
-Alcance tomado de [PRODUCT](PRODUCT.md), [ARCHITECTURE](ARCHITECTURE.md) y [ROADMAP](ROADMAP.md): partidos del Elche desde aproximadamente 2018, de local y visitante; Primera, Segunda, Primera Federación y categorías históricas equivalentes, Copa del Rey y playoffs. Incluir **2017/18** permite evaluar los partidos de la primera mitad de 2018; una búsqueda que empiece en la temporada 2018/19 puede perderlos.
+Necesidades de [PRODUCT](PRODUCT.md), [ARCHITECTURE](ARCHITECTURE.md) y [ROADMAP](ROADMAP.md): fechas, equipos y localía, competición/temporada, estado, resultados y estadio real del partido; liga, categorías inferiores históricas, Copa y ascensos desde **2017/18**, con actualizaciones ocasionales. La fecha, marcador o sede desconocidos permanecen nulos.
 
-Se comparan tres APIs con documentación pública oficial, planes accesibles y capacidad de consulta histórica. La evaluación distingue catálogo anunciado, estructura técnica y cobertura histórica realmente demostrada. No se han probado respuestas con credenciales ni se ha contactado con empresas. Las páginas comerciales no prueban que todos los partidos/campos de todas las temporadas estén disponibles. Precios publicados orientativos, sin conversión de moneda ni compromiso de compra; deben revalidarse antes de contratar.
+Se han consultado páginas oficiales de proveedores y repositorios de sus propios publicadores. «Oficial» para un dataset significa su repositorio de origen, no que esté respaldado por LaLiga o RFEF. También se leyeron archivos públicos en memoria para contar registros del Elche y revisar su estructura: **no se guardaron datasets en el proyecto ni se ejecutó un importador**. Los recuentos prueban presencia en esos archivos, no exactitud ni completitud frente a todos los partidos disputados.
 
-## Cobertura e historia
+## Comparación de alternativas gratuitas
 
-| Necesidad | Sportmonks | API-Football / API-Sports | football-data.org |
+| Fuente | Acceso, formato y límites | Cobertura y derechos relevantes | Decisión |
 | --- | --- | --- | --- |
-| Primera y Segunda | Anunciadas en páginas específicas [S1, S2]. | Ambas en catálogo [A1]. | Ambas en catálogo; Primera figura en gratuito [F1]. |
-| Copa del Rey y Supercopa | Anunciadas [S1]. | Ambas en catálogo [A1]. | Ambas en catálogo [F1]. |
-| Primera Federación | Anunciada [S1]; faltan grupos/ediciones exactos. | Catálogo con grupos RFEF y playoffs [A1]. | No aparece en el catálogo consultado [F1]. |
-| Antigua Segunda B, 2017/18 y 2018 | Sin demostración pública suficiente para esa edición concreta. | Los nombres actuales RFEF del catálogo no demuestran cobertura de Segunda B de 2017/18. | No aparece Segunda B en el catálogo consultado. |
-| Playoffs de ascenso | El modelo tiene fases/eliminatorias [S5]; falta verificar las ediciones españolas requeridas y si consumen otra competición contratada. | Hay playoffs RFEF anunciados; falta comprobar ascenso de Segunda y Segunda B por edición. | Lista «La Liga Play-Offs»; no demuestra ascenso desde Segunda B [F1]. |
-| Historia desde 2018 | Anuncio general desde 2005/06 [S6], sin garantía uniforme por liga/campo; archivo antiguo requiere complemento [S3]. | Temporadas disponibles se descubren por competición [A3]; no se acredita aquí cada edición desde 2017/18. | ML Pack Light anuncia diez temporadas, sin demostrar todas las competiciones necesarias [F2]. |
+| **OpenFootball** [O1–O4] | Archivos JSON y Football.TXT descargables sin clave. Sin cuota comercial de llamadas; la descarga está sujeta a la disponibilidad y límites del alojamiento. | Datos publicados bajo CC0. Primera/Segunda y algunas Copas; historia y carencias comprobadas abajo. Las muestras no aportan sede ni un estado de partido explícito. | **Principal**, con cobertura parcial y corrección manual. |
+| **footballcsv/espana** [C1] | CSV gratuito sin cuenta. Es una exportación de OpenFootball, no una fuente independiente. El árbol visible llega a 2020/21. | Declara CC0; columnas de jornada, fecha, equipos y resultado. No acredita actualización al día ni mejora las lagunas de origen. | Alternativa de formato; no basar las actualizaciones en este espejo. |
+| **Football-Data.co.uk** [D1, D2] | Descargas CSV/Excel gratuitas; Primera y Segunda con amplio histórico, incluyendo 2017/18 en el índice español. | Su página limita el uso a particulares y señala fines de predicción de liga; no acredita permiso abierto para republicar un archivo público. No aporta Segunda B/Copa ni sedes en el esquema documentado. | No seleccionar sin permiso específico gratuito para este uso; no confundir descarga gratis con licencia abierta. |
+| **API-Football Free** [A1–A3] | 100 solicitudes/día y 10/minuto; requiere cuenta y clave. Todas las competiciones/endpoints, con temporadas gratuitas limitadas. | No se acredita acceso gratuito a todo 2017/18–actualidad. Sus términos no conceden licencia de publicación y remiten las autorizaciones a titulares. | Descartada como base: poco volumen no elimina límites históricos ni de derechos. |
+| **football-data.org Free** [F1–F3] | 0 €, diez llamadas/minuto, doce competiciones, requiere cuenta/clave. | Primera entre las gratuitas; no prueba el histórico completo requerido ni Segunda/Copa gratis. Atribución obligatoria; cláusula 9.1 impide seguir mostrando los datos tras cancelar la suscripción. | No recomendar para archivo permanente independiente del proveedor. |
+| **Sportmonks Free** [S1] | Gratuito permanente para Superliga danesa y Premiership escocesa. | No cubre Elche en ese plan. Una prueba de un plan de pago no es una solución gratuita permanente para actualizarlo. | **Retirada la recomendación anterior** por presupuesto. |
+| **RFEF, publicaciones oficiales** [R1–R4] | Noticias, tablas y PDF de horarios consultables gratis. | Hay evidencia histórica de Segunda B y ascensos de 2018. No se ha identificado una licencia abierta ni un paquete de fixtures reutilizable que cubra el alcance completo. Su aviso protege contenido audiovisual; eso no demuestra una licencia de datos. | Referencia para contrastar hechos al completar 4a; no aprobar extracción masiva/importación de sus tablas. |
 
-**Conclusión de cobertura:** ninguno puede marcarse como completo con la evidencia obtenida. Primera Federación actual no prueba la antigua Segunda B. Copa y playoffs deben comprobarse además de la liga regular. Un catálogo no permite asignar a Elche una categoría en una temporada ni inferir que una lista vacía significa que no jugó.
+No se propone scraping, eludir cuotas, cuentas múltiples ni convertir una prueba con tarjeta en fuente habitual. No se contactó con proveedores. Un CSV/JSON preparado por el propietario puede servir de entrada futura, pero el formato no cambia los permisos de los datos que contenga.
 
-## Datos del partido y adecuación al dominio
+## Cobertura comprobada del candidato principal
 
-- **Sportmonks:** el esquema de partido contiene identificador, temporada, competición, fase, fecha y estado; admite fecha y recinto nulos y relaciones de participantes, resultados y recinto [S4]. La localía procede de los metadatos del participante [S7]. Permite representar lo necesario, aunque no certifica la exactitud histórica del estadio.
-- **API-Football:** documenta fechas, estado, equipos local/visitante, recinto y desglose de resultados, incluida prórroga y penaltis; permite consultar una temporada/competición [A3]. La presencia de estos campos no acredita su completitud histórica.
-- **football-data.org:** anuncia fixtures y resultados [F2]; al quedar descartado por condiciones de baja, no se profundiza en su correspondencia de recintos históricos.
+Se contó la aparición del Elche en `matches`, o en líneas de partido para Football.TXT. En JSON se observó que tanto la raíz como `score` pueden cambiar de estructura entre ediciones; no debe asumirse un esquema uniforme. La tabla describe archivos concretos, **no valida un importador**.
 
-En una futura evaluación de muestras deben comprobarse el recinto real del partido (incluidas sedes neutrales y cambios de campo), fecha/zona horaria, ambos equipos y resultado tras prórroga sin sumar tanda. Nunca sustituir un estadio desconocido por el campo actual del local ni un resultado nulo por 0–0. Importar un partido no crea asistencia. Identificadores y slugs locales, correcciones bloqueadas y metadatos personales permanecen independientes del proveedor. Son criterios para la selección; aquí no se diseña ni implementa el importador.
-
-## Coste y límites
-
-| Proveedor | Plan de referencia publicado | Límites y efecto para este archivo |
+| Temporada / fase | Archivo inspeccionado | Presencia y lagunas |
 | --- | --- | --- |
-| Sportmonks [S3] | Starter: 29 €/mes, cinco competiciones elegibles; archivo de más de tres temporadas desde 29 € de pago único. | 2.000 solicitudes por entidad y hora. Presupuesto inicial mínimo orientativo: 58 € antes de IVA, condicionado a qué archivo/competiciones cubra el complemento. No es un presupuesto cerrado. Grupos o playoffs separados pueden superar cinco competiciones. |
-| API-Football [A2, A4] | Free: 0 USD; Pro: 19 USD/mes. | Free: 100/día y 10/minuto; Pro: 7.500/día y 300/minuto (5/segundo). Gratis limita temporadas; no sirve como promesa de historia desde 2018. |
-| football-data.org [F2] | Free: 0 €; Standard: 49 €/mes; ML Pack Light: 29 €/mes. | Respectivamente 10, 60 y 20 solicitudes/minuto. ML anuncia diez temporadas, pero sus doce competiciones no equivalen a todo el alcance español. IVA puede aplicar. |
+| 2017/18 — Segunda B | `football.json/2017-18/es.2.json` | Cero registros del Elche: este archivo es de Segunda, no Segunda B. No sirve para la campaña del Elche. Liga y ascenso de esa temporada quedan manuales. |
+| 2018/19 — Segunda | `football.json/2018-19/es.2.json` | 42 partidos del Elche con marcador final. |
+| 2019/20 — Segunda | `football.json/2019-20/es.2.json`; contraste con `espana/2019-20/2-liga2.txt` | 42 partidos; el archivo de liga regular no cubre el playoff del Elche. Completar esa fase por separado mediante 4a. |
+| 2020/21, 2021/22, 2022/23 — Primera | `football.json/<temporada>/es.1.json` | 38 partidos del Elche con resultado en cada edición. |
+| 2023/24 — Segunda | `espana/2023-24/2-liga2.txt` | 42 líneas de partido del Elche. La ruta `football.json/2023-24/es.2.json` devuelve 404; no equivale a ausencia en el dataset fuente. |
+| 2024/25 — Segunda | `football.json/2024-25/es.2.json` | 42 partidos, 41 con marcador final; Deportivo–Elche del 01/06/2025 tiene `score` vacío. Debe completarse manualmente, sin interpretar 0–0. |
+| 2025/26 — Primera | `football.json/2025-26/es.1.json` | 38 registros del Elche; variaciones de estructura en `score`. No se certificó en esta investigación la completitud de sus resultados. |
+| 2026/27 — Primera | `football.json/2026-27/es.1.json` | 38 fixtures del Elche; siete con resultado en la muestra consultada. Los demás no se deben tratar como partidos terminados. Actualización parcial. |
+| Copa 2020/21–2024/25 | `espana/<temporada>/cup.txt` | Respectivamente 3, 4, 3, 3 y 4 líneas del Elche. Presencia comprobada, sin certificación exhaustiva de fechas/resultados ni de todas las rondas. |
+| Copa 2017/18–2019/20 y desde 2025/26 | Sin muestra suficiente | Cobertura no acreditada; completar manualmente salvo futura evidencia de un archivo abierto concreto. |
+| Primera Federación / otras categorías y Supercopa | Sin muestra suficiente | No inferir cobertura desde Primera/Segunda; revisar solo si son relevantes para el archivo. |
 
-Las cuotas publicadas parecen suficientes para importaciones ocasionales de un club: es una estimación de uso, no un benchmark. El consumo dependerá de páginas, intervalos, referencias y reintentos; no debe presupuestarse una llamada por partido ni prometer una carga completa en un día. No se necesitan livescores, estadísticas avanzadas ni planes superiores por volumen. Para Sportmonks se toma el límite del plan comercial actual, sin generalizar ejemplos de documentación con otros límites. Su prueba de pago exige tarjeta y puede convertirse en cobro [S8]; no se ha activado.
+Para reproducir la consulta: repositorio JSON en revisión `e6744429ee395bc86f247348c6184bb08d4eb361`; Football.TXT en `80035a93dd4920985af52aa097a54a6fb888563b`. Rutas completas en [O3, O4]. Los enlaces a `master` cambian: una futura importación debe identificar la revisión/archivo utilizado. No se deducen estadios históricos de equipos ni se suman estos recuentos para declarar cobertura total.
 
-## Persistencia, publicación y salida
+## Derechos, calidad y complemento manual
 
-| Proveedor | Evidencia oficial | Consecuencia |
-| --- | --- | --- |
-| Sportmonks [S8, S9] | Permite guardar, transferir y distribuir datos dentro del producto y mostrarlos a usuarios; revender el feed requiere aprobación. Precios por dominio. | Mejor encaje inicial. No queda expresamente resuelta la supervivencia indefinida de esos permisos tras baja/cambio de proveedor. Confirmar también dominio público y entornos de desarrollo/prueba. |
-| API-Football [A5] | Permite construir webs y prohíbe reventa directa; declara que no concede licencia de uso/publicación y remite las autorizaciones a los titulares correspondientes. | La suscripción técnica no basta para aprobar el archivo público. No se ha acreditado permiso expreso de conservación y publicación tras baja. |
-| football-data.org [F3] | Exige atribución visible y su cláusula 9.1 impide mostrar en el sitio los datos obtenidos al cancelar. | Descartado para un archivo que debe continuar público al abandonar el proveedor, salvo acuerdo distinto expreso. |
+La licencia CC0 publicada en ambos repositorios permite reutilizar, modificar, conservar y mostrar los datos sin depender de una suscripción. No exige atribución; conviene conservar autoría, URL, revisión y licencia como procedencia. CC0 no concede derechos sobre marcas, fotografías ni derechos ajenos, y el publicador excluye garantías [O2]. Se recomienda importar solo hechos de fixtures, sin escudos, texto editorial ni fotografías.
 
-Esta es una lectura de las condiciones publicadas para seleccionar proveedor, no una afirmación de que todos los hechos futbolísticos requieran licencia. No se presume que el carácter personal o gratuito del proyecto resuelva las restricciones. Ninguna recomendación incluye licencias de escudos/fotos; esos activos quedan fuera del alcance de importación.
+Las muestras de liga contienen fecha, nombres de equipos, jornada y resultados, con hora en algunos registros; no incluyen ID externo estable de partido, sede o estado explícito. El orden de equipos, las horas y las reglas de prórroga/tanda deben validarse por formato. El resultado local debe incluir prórroga y excluir tanda; la fecha pasada o un marcador presente no bastan por sí solos para asignar estado final sin comprobar la semántica del archivo. La falta de identificador estable será una condición importante para la reconciliación de 4c; no se debe fabricar una identidad permanente a partir de fecha y rival y asumir que nunca cambian.
 
-## Condiciones pendientes para la decisión del propietario
+Las publicaciones oficiales sirven para contrastes puntuales: RFEF documenta horarios y sede del Villarreal B–Elche de junio de 2018 [R2], su resultado en la crónica [R3] y horarios de liga de 2017/18 [R4]. Un horario publicado no demuestra que se disputara en esa fecha. Para completar 4a, registrar hechos comprobados y notas propias, sin copiar crónicas, fotografías o compilar sistemáticamente una base ajena. No se ha establecido que RFEF ofrezca una fuente abierta importable; cualquier reutilización masiva requeriría aclaración previa.
 
-Propuesta de decisión: **aprobar o rechazar Sportmonks como candidato condicionado**, manteniendo 4c pendiente. Para una aprobación definitiva se necesita:
+La carga manual prioritaria sería 2017/18, ascenso de 2020, Copas no acreditadas y sedes desconocidas de los viajes. Si un hecho no puede verificarse, permanece nulo. Que la edición manual sea posible no implica que todas las lagunas ya estén reconstruidas.
 
-1. Confirmación escrita aplicable al plan de que se pueden conservar hechos importados en PostgreSQL, copias de seguridad y datos corregidos, y seguir mostrándolos públicamente de forma indefinida tras cancelar, bajar de plan o cambiar de proveedor; aclarar atribución y cualquier obligación de borrado.
-2. Matriz de ediciones/identificadores disponibles desde 2017/18: Primera, Segunda, Segunda B histórica, Primera Federación, Copa y playoffs, distinguiendo grupos y fases. Verificar específicamente ascensos de 2018 y 2020, incluyendo todas las eliminatorias del Elche; son objetivos de comprobación, no cobertura confirmada.
-3. Evidencia de muestras históricas con fechas, equipos, estado, resultado y recinto del encuentro; indicar campos ausentes y lagunas por edición. Pedir ejemplos al proveedor o autorizar una evaluación técnica separada; no crear cuentas implícitamente.
-4. Precio total del archivo requerido, selección exacta de las cinco competiciones o suplementos, IVA y condiciones para un dominio público y entornos aislados. El precio «desde» del histórico no garantiza incluir todo 2017/18–actualidad.
+## Actualizaciones ocasionales y límite con 4c
 
-Estas preguntas quedan preparadas, **no enviadas**. Una aprobación condicionada no elimina los puntos pendientes. Si no se resuelven, documentar qué temporadas/competiciones quedarían manuales y obtener una decisión explícita sobre ese alcance antes de 4c. No completar huecos silenciosamente con scraping u otra API.
+Propuesta para una futura tarea autorizada: obtener un archivo abierto concreto al final de una temporada o cuando interese, revisar únicamente los fixtures del Elche y sus lagunas y aplicar cambios expresamente. Un archivo propio CSV/JSON con hechos introducidos por el propietario puede complementar las fuentes abiertas; se documentaría su procedencia. No se necesitan herramientas de pago ni disponibilidad continua de GitHub después de importar.
 
-## Fuentes oficiales consultadas
+Antes de implementar, el propietario debe aprobar **OpenFootball + complemento manual, presupuesto 0 € y cobertura parcial explícita**. Esa aprobación permitiría concretar el alcance de 4c por separado: entradas estáticas admitidas, normalización, identidad/procedencia sin ID de proveedor y reconciliación con preview/apply. Aquí no se define un formato nuevo, no se escribe código y no se crea una migración. Attendance, notas personales, slugs y correcciones locales deben conservarse en cualquier futura importación.
 
-Todos los enlaces siguientes se consultaron el 2026-10-18. Las condiciones y precios pueden cambiar. El catálogo completo de Sportmonks superó el límite de lectura del navegador; se usa su resultado indexado solo para la afirmación general de historia, y páginas específicas para cobertura. No se interpreta esa limitación como ausencia de competiciones.
+Si una descarga desaparece o una licencia cambia para nuevos archivos, mantener lo ya obtenido bajo sus condiciones documentadas y completar manualmente. No sustituir automáticamente la fuente por una API comercial. No se exige resolver un permiso comercial pendiente para el camino recomendado CC0; las opciones con permisos sin acreditar quedan fuera.
 
-- **S1:** [Sportmonks — La Liga y competiciones españolas, FAQ](https://www.sportmonks.com/football-api/la-liga-api/).
-- **S2:** [Sportmonks — Segunda División](https://www.sportmonks.com/football-api/la-liga-2-api/).
-- **S3:** [Sportmonks — planes e histórico](https://www.sportmonks.com/football-api/plans-pricing/).
-- **S4:** [Sportmonks — entidad Fixture](https://docs.sportmonks.com/v3/endpoints-and-entities/entities/fixture).
-- **S5:** [Sportmonks — eliminatorias por temporada](https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/seasons/get-brackets-by-season-id).
-- **S6:** [Sportmonks — catálogo e historia general](https://www.sportmonks.com/football-api/coverage/).
-- **S7:** [Sportmonks — participantes y localía](https://docs.sportmonks.com/v3/tutorials-and-guides/tutorials/includes/participants).
-- **S8:** [Sportmonks — términos, apartados Copyright, Terms of use y cancelación](https://www.sportmonks.com/terms-of-service/).
-- **S9:** [Sportmonks — almacenamiento y uso dentro del producto](https://www.sportmonks.com/integrity-support/).
-- **A1:** [API-Football — cobertura, Spain](https://www.api-football.com/coverage).
-- **A2:** [API-Football — precios directos](https://www.api-football.com/pricing).
-- **A3:** [API-Football — guía oficial, temporadas y fixtures](https://www.api-football.com/news/post/how-to-get-started-with-api-football-the-complete-beginners-guide).
-- **A4:** [API-Football — límites de frecuencia](https://www.api-football.com/news/post/how-ratelimit-works).
-- **A5:** [API-Football — términos, Service & data](https://www.api-football.com/terms).
-- **F1:** [football-data.org — cobertura](https://www.football-data.org/coverage).
-- **F2:** [football-data.org — precios](https://www.football-data.org/pricing).
-- **F3:** [football-data.org — términos, apartados 7 y 9](https://www.football-data.org/about).
+## Fuentes primarias consultadas el 2026-10-18
+
+- **O1:** [OpenFootball España — repositorio y alcance](https://github.com/openfootball/espana).
+- **O2:** [Licencia CC0 de España](https://github.com/openfootball/espana/blob/master/LICENSE.md) y [licencia de football.json](https://github.com/openfootball/football.json/blob/master/LICENSE.md).
+- **O3:** [Archivos JSON en la revisión consultada](https://github.com/openfootball/football.json/tree/e6744429ee395bc86f247348c6184bb08d4eb361). Rutas de ejemplo: [2019/20 Segunda](https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/es.2.json), [2024/25 Segunda](https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2024-25/es.2.json).
+- **O4:** [Football.TXT en la revisión consultada](https://github.com/openfootball/espana/tree/80035a93dd4920985af52aa097a54a6fb888563b), [Segunda 2023/24](https://raw.githubusercontent.com/openfootball/espana/80035a93dd4920985af52aa097a54a6fb888563b/2023-24/2-liga2.txt) y [Copa 2024/25](https://raw.githubusercontent.com/openfootball/espana/80035a93dd4920985af52aa097a54a6fb888563b/2024-25/cup.txt).
+- **C1:** [footballcsv/espana — formato, procedencia y licencia](https://github.com/footballcsv/espana).
+- **D1:** [Football-Data.co.uk — descargas y restricciones de uso](https://football-data.co.uk/data.php).
+- **D2:** [Índice español de CSV](https://football-data.co.uk/spainm.php) y [descripción de columnas](https://football-data.co.uk/notes.txt). El navegador no pudo abrir directamente el índice en esta revisión; su listado español aparece en el resultado oficial indexado. No se han certificado recuentos de sus archivos.
+- **A1:** [API-Football — plan gratuito y temporadas limitadas](https://www.api-football.com/pricing).
+- **A2:** [API-Football — frecuencia de solicitudes](https://www.api-football.com/news/post/how-ratelimit-works).
+- **A3:** [API-Football — condiciones, Service & data](https://www.api-football.com/terms).
+- **F1:** [football-data.org — plan gratuito](https://www.football-data.org/pricing).
+- **F2:** [football-data.org — cobertura gratuita y de pago](https://www.football-data.org/coverage).
+- **F3:** [football-data.org — atribución y cláusula 9.1](https://www.football-data.org/about).
+- **S1:** [Sportmonks — alcance del plan gratuito permanente](https://www.sportmonks.com/football-api/how-football-api-works/).
+- **R1:** [RFEF — aviso legal](https://rfef.es/es/aviso-legal).
+- **R2:** [RFEF — horarios y sedes del ascenso de junio de 2018](https://rfef.es/es/noticias/horarios-fase-de-ascenso-primera-y-segunda-division).
+- **R3:** [RFEF — crónica del ascenso del Elche, 23/06/2018](https://rfef.es/es/noticias/el-elche-cf-regresa-segunda-division-un-ano-despues).
+- **R4:** [RFEF — PDF de horarios, Segunda B grupo III, jornada 32 de 2017/18](https://rfef.es/sites/default/files/images18/segunda_division_b_-_grupo_iii_-_jornada_32.pdf).
