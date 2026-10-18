@@ -1,12 +1,12 @@
 # 4b — Fuentes de fixtures con presupuesto de 0 €
 
-Revisión: **18 de octubre de 2026**. Investigación reabierta por requisito del propietario: **0 € para obtener/importar fixtures**, también en actualizaciones ocasionales. Recomendación pendiente de aprobación. Sustituye la propuesta anterior de Sportmonks, conservada en el historial Git. No se han creado cuentas, contratado servicios, añadido credenciales ni importado datos. 4c sigue pendiente.
+Revisión: **18 de octubre de 2026**. Investigación reabierta por requisito del propietario: **0 € para obtener/importar fixtures**, también en actualizaciones ocasionales. **4b completado: recomendación aprobada por el propietario el 2026-10-18.** Sustituye la propuesta anterior de Sportmonks, conservada en el historial Git. No se han creado cuentas, contratado servicios, añadido credenciales ni importado datos. 4c sigue pendiente.
 
-## Recomendación para aprobar o rechazar
+## Decisión aprobada
 
 **Usar OpenFootball como fuente principal de archivos estáticos CC0 y completar las lagunas mediante 4a.** Preferir JSON cuando exista y esté comprobado; recurrir a sus archivos Football.TXT para ediciones no disponibles en JSON. CSV es una alternativa de formato, no un requisito ni una nueva fuente de derechos.
 
-La combinación propuesta cuesta **0 € en adquisición de datos**, no necesita cuenta ni token y permite conservar los datos localmente. No promete el histórico completo desde 2017/18: esa campaña de Segunda B, playoffs y varios partidos de Copa requieren trabajo manual. El propietario ha admitido expresamente esta combinación de importación parcial y edición manual. Sigue pendiente aprobar esta fuente y sus lagunas antes de encargar 4c.
+La combinación propuesta cuesta **0 € en adquisición de datos**, no necesita cuenta ni token y permite conservar los datos localmente. No promete el histórico completo desde 2017/18: esa campaña de Segunda B, playoffs y varios partidos de Copa requieren trabajo manual. El propietario ha admitido expresamente esta combinación de importación parcial y edición manual. El propietario aprueba esta fuente y acepta explícitamente sus lagunas, que se completarán mediante 4a. Esta decisión no autoriza comenzar 4c.
 
 PostgreSQL permanece como única fuente de verdad para lecturas públicas y navegación administrativa. Las actualizaciones serían descargas puntuales revisadas por el propietario, nunca consultas externas en runtime, sincronización continua o un servicio necesario para publicar el archivo. La recomendación no depende de conseguir después una API de pago, una prueba temporal o una autorización comercial.
 
@@ -64,7 +64,7 @@ La carga manual prioritaria sería 2017/18, ascenso de 2020, Copas no acreditada
 
 Propuesta para una futura tarea autorizada: obtener un archivo abierto concreto al final de una temporada o cuando interese, revisar únicamente los fixtures del Elche y sus lagunas y aplicar cambios expresamente. Un archivo propio CSV/JSON con hechos introducidos por el propietario puede complementar las fuentes abiertas; se documentaría su procedencia. No se necesitan herramientas de pago ni disponibilidad continua de GitHub después de importar.
 
-Antes de implementar, el propietario debe aprobar **OpenFootball + complemento manual, presupuesto 0 € y cobertura parcial explícita**. Esa aprobación permitiría concretar el alcance de 4c por separado: entradas estáticas admitidas, normalización, identidad/procedencia sin ID de proveedor y reconciliación con preview/apply. Aquí no se define un formato nuevo, no se escribe código y no se crea una migración. Attendance, notas personales, slugs y correcciones locales deben conservarse en cualquier futura importación.
+El propietario ha aprobado **OpenFootball + complemento manual, presupuesto 0 € y cobertura parcial explícita**, con PostgreSQL como única fuente de verdad tras importar, sin dependencia runtime de OpenFootball ni sincronización continua. **4c no se ha iniciado y requiere un encargo separado** para concretar: entradas estáticas admitidas, normalización, identidad/procedencia sin ID de proveedor y reconciliación con preview/apply. Aquí no se define un formato nuevo, no se escribe código y no se crea una migración. Attendance, notas personales, slugs y correcciones locales deben conservarse en cualquier futura importación.
 
 Si una descarga desaparece o una licencia cambia para nuevos archivos, mantener lo ya obtenido bajo sus condiciones documentadas y completar manualmente. No sustituir automáticamente la fuente por una API comercial. No se exige resolver un permiso comercial pendiente para el camino recomendado CC0; las opciones con permisos sin acreditar quedan fuera.
 
