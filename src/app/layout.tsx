@@ -26,7 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer className="site-footer">
           <div className="site-container footer-inner">
             <p>Elche Away <span aria-hidden="true">/</span> Donde tú vayas.</p>
-            <p>Archivo personal de un aficionado. Sin vinculación oficial con el Elche CF.</p>
+            <p>Archivo personal de un aficionado. Sin vinculación oficial con el Elche CF. <Link href="/auth/sign-in" className="inline-link">Acceso del propietario</Link></p>
           </div>
         </footer>
       </body>

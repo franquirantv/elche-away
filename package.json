@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^20.19.0 || ^22.13.0 || >=24",
-    "npm": ">=10"
+    "node": "^22.20.0 || >=24",
+    "npm": ">=10.9.9"
   },
   "scripts": {
     "dev": "next dev",
@@ -17,9 +17,11 @@
     "db:migrate": "tsx scripts/database.ts migrate development",
     "db:seed": "tsx scripts/database.ts seed development",
     "db:migrate:test": "tsx scripts/database.ts migrate testing",
-    "db:seed:test": "tsx scripts/database.ts seed testing"
+    "db:seed:test": "tsx scripts/database.ts seed testing",
+    "dev:testing": "tsx scripts/dev-testing.ts"
   },
   "dependencies": {
+    "@neondatabase/auth": "0.6.0-beta",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.2",
     "pg": "^8.23.1",
