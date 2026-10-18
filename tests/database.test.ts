@@ -162,3 +162,41 @@ test("local database commands reject production mode and shared development/test
     if (originalTest === undefined) delete environment.TEST_DATABASE_URL; else environment.TEST_DATABASE_URL = originalTest;
   }
 });
+
+// Reference management operates on the existing schema; no auth tables are
+// managed by Drizzle. All data below is synthetic and rolled back.
+test("reference management preserves slugs, validates fields and protects referenced rows", async () => {
+  const { writeReference, readReferences } = await import("../src/db/references");
+  const { readReferenceInput } = await import("../src/server/reference-input");
+  function input(kind: string, values: Record<string, string>) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries({ kind, intent: "save", ...values })) form.set(key, value);
+    return readReferenceInput(form);
+  }
+  await rolledBack(async (tx) => {
+    await writeReference(tx, "clubs", input("clubs", { name: "Club Ámbito Sintético" }));
+    await writeReference(tx, "clubs", input("clubs", { name: "Club Ámbito Sintético" }));
+    const created = (await readReferences(tx)).clubs.filter((club) => club.name === "Club Ámbito Sintético");
+    assert.deepEqual(created.map((club) => club.slug).sort(), ["club-ambito-sintetico", "club-ambito-sintetico-2"]);
+    await writeReference(tx, "clubs", input("clubs", { id: created[0].id, name: "Club Corregido" }));
+    assert.equal((await readReferences(tx)).clubs.find((club) => club.id === created[0].id)?.slug, created[0].slug);
+    await assert.rejects(() => writeReference(tx, "clubs", input("clubs", { name: "Example", crestPath: "https://untrusted.invalid/crest.svg" })));
+    await assert.rejects(() => writeReference(tx, "clubs", input("clubs", { id: ELCHE_CLUB_ID, intent: "delete", confirmDelete: "yes" })));
+    await assert.rejects(() => writeReference(tx, "clubs", input("clubs", { id: created[0].id, intent: "delete" })));
+    await rejectsSql(tx, "23503", (s) => writeReference(s, "stadiums", input("stadiums", { id: fixtureIds.ground, intent: "delete", confirmDelete: "yes" })));
+    await rejectsSql(tx, "23503", (s) => writeReference(s, "tiers", input("tiers", { id: fixtureIds.tier, intent: "delete", confirmDelete: "yes" })));
+    await writeReference(tx, "clubs", input("clubs", { id: created[0].id, intent: "delete", confirmDelete: "yes" }));
+    assert.equal((await readReferences(tx)).clubs.some((club) => club.id === created[0].id), false);
+    await writeReference(tx, "stadiums", input("stadiums", { id: fixtureIds.otherGround, name: "Campo del Recuerdo (ejemplo)", city: " ", latitude: "", longitude: "" }));
+    const ground = (await readReferences(tx)).stadiums.find((row) => row.id === fixtureIds.otherGround)!;
+    assert.equal(ground.city, null);
+    assert.equal(ground.latitude, null);
+    assert.equal(ground.slug, "campo-del-recuerdo-ejemplo");
+    await assert.rejects(() => writeReference(tx, "stadiums", input("stadiums", { name: "Bad coordinates", latitude: "90" })));
+    await assert.rejects(() => writeReference(tx, "stadiums", input("stadiums", { name: "Bad province", provinceCode: "99" })));
+    await writeReference(tx, "seasons", input("seasons", { id: fixtureIds.season, label: "2030/31 (ejemplo)", startYear: "2030", elcheTierId: "" }));
+    assert.equal((await listTrips(tx)).find((trip) => trip.competition === "Copa de ejemplo")?.tier, null);
+    await writeReference(tx, "seasons", input("seasons", { id: fixtureIds.season, label: "2030/31 (ejemplo)", startYear: "2030", elcheTierId: fixtureIds.tier }));
+    assert.equal((await listTrips(tx)).find((trip) => trip.competition === "Copa de ejemplo")?.tier, "División de ejemplo");
+  });
+});

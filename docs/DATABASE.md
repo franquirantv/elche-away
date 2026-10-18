@@ -95,3 +95,9 @@ Generate versioned Drizzle SQL and inspect it. Test constraints and upgrades on 
 - Elche-participation validation is enforced on the current only write entry point (local seed). All future admin/import write paths must reuse validation; no public mutation endpoints exist in this milestone. Referenced Elche deletion is additionally prevented by FK constraints; future reference management must reject deletion of the configured Elche even without matches.
 - Read modules join attendance before exposing trips/visited venues. Build requires no database access; missing/broken runtime configuration fails explicitly rather than returning synthetic or empty fallback data.
 - Initial SQL permits only trusted, flat `/crests/` file references with supported image extensions. No assets/uploads are introduced.
+
+## Milestone 3 reference editing and managed Auth
+
+No public-domain schema change is required. Reference mutations use existing tables/constraints, explicit owner authorization, nullable normalization and immutable existing slugs. Elche deletion is refused in the write helper even if no fixtures reference it. Competition/season/tier edits remain independent of fixture attendance.
+
+Neon Auth owns users, accounts and sessions under its managed `neon_auth` schema; our Drizzle migrations/seed do not manage those tables or create a second local auth schema. No user_id or role table is added to the single-owner domain. Application admin authorization is an environment-configured Neon user ID for each branch, not a database role flag.

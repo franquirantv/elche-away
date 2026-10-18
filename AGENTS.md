@@ -17,6 +17,7 @@ Personal public archive of attended Elche CF away matches, with one owner's prot
 - Competition != Elche's season tier. Providers are import sources only: public reads use PostgreSQL. Imports must preserve attendance, personal metadata, stable local IDs/slugs and locally corrected facts.
 - Unknown historical facts stay null. Never invent dates/scores or treat missing results as 0–0. Derive statistics.
 - Default to Server Components; database access belongs in `src/db`, protected operations in `src/server`. Keep browser interactivity small. No separate backend or generic repository framework.
+- Neon Auth verifies sessions; application admin access additionally requires exact configured `ADMIN_USER_ID`. Missing configuration denies access. Never grant admin to the first login, by email, or by client-supplied identity. Do not manage Neon's auth schema with Drizzle/seed.
 - Validate input server-side. Authorize every protected read, mutation and upload operation. Layout/navigation checks alone are insufficient.
 - Keep secrets out of client code, `NEXT_PUBLIC_*`, logs, fixtures and commits. Local/preview environments must never write to production services.
 - Prefer strict types and existing patterns; avoid `any` and speculative abstractions. Keep diffs focused. Test behavior, domain rules and authorization boundaries.

@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; auth, imports and deployment remain planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.
+Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; Milestone 3 auth/reference editing is implemented pending owner identity configuration and real Google acceptance; imports and deployment remain planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.
 
 ## One application
 
@@ -45,16 +45,19 @@ Use a lightweight tiers table and nullable seasons.elche_tier_id. Competition is
 
 ## Authentication and authorization
 
-Recommend one OAuth provider already used by the owner (GitHub or Google), with one immutable provider account ID allowed server-side. Deny other identities and recheck owner identity at each protected operation via `requireAdmin()`. Do not authorize solely by display name/email, navigation, middleware or an admin layout. Session handling should use a maintained library with secure HttpOnly cookies, expiry, OAuth state/PKCE and CSRF protections, never handwritten crypto/OAuth. Keep admin/session responses out of shared caches.
+Owner-approved choice: **Neon Auth (Managed Better Auth) with Google**, using the official `@neondatabase/auth` Next.js SDK and a small custom Spanish sign-in UI. Google shared credentials are for development/testing only; own credentials/domain setup will be required before production. Current installed SDK is pinned to `0.6.0-beta`; the SDK version is pre-release even though Neon describes the managed service as generally available. Its package includes transitive UI dependencies; the app imports only the API client/server paths, not a UI kit. Reassess the pin on deliberate upgrades.
 
-| Option | Assessment |
-| --- | --- |
-| OAuth plus maintained library | Recommended; no local passwords or email delivery. |
-| Local password | Adds password storage, recovery and brute-force defenses. |
-| Magic link | Adds email delivery and token lifecycle for one owner. |
-| Managed identity service | Useful later, but extra account/service for little current benefit. |
+Alternatives reviewed: Auth.js has an adapter-free session option but its current Next.js setup remains beta; self-managed Better Auth gives more hooks/control but requires owning its server/schema integration. Neon Auth fits the existing Neon environments and removes that maintenance. Local passwords, email delivery services, role systems and signup UI are unnecessary here.
 
-Library remains unresolved: Auth.js can support adapter-free cookie/JWT sessions, but its current Next.js installation docs specify a beta and link a Better Auth migration guide. Better Auth is a candidate, not the unexplained fixed choice in the old agent notes; evaluate supported session mode and required tables before installing. Prefer few tables, but not at the cost of maintained security. The provider/library decision is required for the authentication milestone, not foundation work. If the chosen library requires auth tables, document its owned schema separately. No custom role model or public signup UI. Vercel deployment protection is supplementary, not application authorization.
+**Authentication is not authorization.** `getVerifiedSession()` obtains a session through the native SDK with `disableCookieCache=true`, so protected authorization does not rely on a previously cached session snapshot. It fails closed on upstream errors/expired sessions. `requireAdmin()` then compares `session.user.id` exactly against the explicitly configured `ADMIN_USER_ID`. The ID is the stable Neon Auth user identity scoped to that branch, not a display name, email, client field or an automatically assigned first user. Unknown/missing owner configuration denies every admin operation. Native Neon roles do not grant application admin rights.
+
+`/auth/sign-in` offers Google login; `/auth/account` shows only the signed-in user's own ID and authorization state, so the owner can configure the allowlist explicitly after the first login. It does not grant access or write configuration. Development and testing can have different user IDs. Use separate `TEST_ADMIN_USER_ID` and test Auth URL/secret for manual testing. Localhost ports share browser cookies: use a separate browser profile/incognito context for manual testing to avoid mixing sessions between environments.
+
+`src/proxy.ts` applies native SDK session middleware only to `/admin/:path*`, for session redirects and cookie maintenance. It is not an authorization boundary. Every protected read and Server Action calls `requireAdmin()` independently before reading PostgreSQL or parsing/writing submitted references. The native `/api/auth/[...path]` handler preserves OAuth/verifier/session handling. Cookies and auth responses are not public cached content; public archive pages remain independent of Auth availability.
+
+Milestone 3 reference editing covers clubs/stadiums/competitions/tiers/seasons only. Server validation normalizes optional fields, keeps existing slugs unchanged, retries concurrent slug reservations under SQL uniqueness, requires explicit delete confirmation and prevents deleting Elche even if unreferenced. PostgreSQL RESTRICT prevents deleting used references. No match/attendance mutations are exposed yet.
+
+Managed users/sessions/configuration belong to Neon's `neon_auth` schema, outside our Drizzle schema and synthetic domain seed. Do not introspect/adopt or reset those tables. Branches were configured separately; no production is used. Automated tests use a loopback-only synthetic Auth upstream exercising the real SDK/middleware/actions, not Google or real user accounts. It is test code only; the app has no login bypass. Real Google login/logout/restoration and final owner allowlist are explicit manual acceptance checks, not claimed by simulated tests. See README.
 
 ## Images (post-MVP)
 
@@ -90,7 +93,7 @@ Run reviewed migrations as an explicit release step after disposable-database va
 
 ## Independent review synthesis
 
-Keep the preferred stack; remove the premature Better Auth commitment. Match/attendance separation is now justified by the all-fixture import requirement; do not add another trip table. Avoid club-stadium tenancy tables, generic league membership, geographic tables, stored counters and generic data layers. Map remains MVP; photos, polygon shading and broad statistics wait. Recheck service choices at the milestone that actually needs them.
+Keep the preferred stack; the owner has now selected Neon Auth + Google after comparison. Match/attendance separation is now justified by the all-fixture import requirement; do not add another trip table. Avoid club-stadium tenancy tables, generic league membership, geographic tables, stored counters and generic data layers. Map remains MVP; photos, polygon shading and broad statistics wait. Recheck service choices at the milestone that actually needs them.
 
 ## Primary references
 
@@ -98,6 +101,7 @@ Checked during planning; versions, plans and policies must be rechecked at imple
 
 - [Next.js server boundaries](https://nextjs.org/docs/app/guides/backend-for-frontend), [authorization in mutations](https://nextjs.org/docs/app/getting-started/mutating-data)
 - [Neon with Next.js](https://neon.com/docs/guides/nextjs), [serverless driver](https://neon.com/docs/serverless/serverless-driver), [Drizzle migrations](https://orm.drizzle.team/docs/migrations)
+- [Neon Auth Next.js integration](https://neon.com/docs/auth/quick-start/nextjs-api-only), [server SDK](https://neon.com/docs/auth/reference/nextjs-server), [Google OAuth setup](https://neon.com/docs/auth/guides/setup-oauth)
 - [Auth.js installation](https://authjs.dev/getting-started/installation), [access restriction](https://authjs.dev/guides/restricting-user-access), [Better Auth](https://better-auth.com/docs/introduction)
 - [Vercel Blob](https://vercel.com/docs/vercel-blob), [client uploads](https://vercel.com/docs/vercel-blob/client-upload), [R2](https://developers.cloudflare.com/r2/), [Cloudinary uploads](https://cloudinary.com/documentation/image_upload_api_reference)
 - [Leaflet](https://leafletjs.com/), [MapLibre](https://maplibre.org/maplibre-gl-js/docs/), [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/)
