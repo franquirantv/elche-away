@@ -293,7 +293,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4c completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. La funcionalidad de 4d está aceptada por el propietario; la rama está verificada y preparada para revisión e integración.
+Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 sigue pendiente.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
 
