@@ -143,7 +143,28 @@ test("Google login and account bootstrap do not expose admin data to unauthentic
   assert.ok([302, 307].includes(response.status));
   assert.match(response.headers.get("location") ?? "", /auth\/sign-in/);
   const account = await (await fetch(`${origin}/auth/account`)).text();
-  assert.match(account, /No has iniciado sesión/);
+  assert.match(account, /Continuar con Google/);
+});
+
+test("OAuth return exchanges the verifier before rendering the account and grants no admin permission", async () => {
+  const callback = await fetch(`${origin}/auth/account?neon_auth_session_verifier=synthetic-verifier`, {
+    redirect: "manual", headers: { Cookie: "__Secure-neon-auth.session_challenge=synthetic-challenge" },
+  });
+  assert.ok([302, 307].includes(callback.status));
+  assert.equal(new URL(callback.headers.get("location")!, origin).pathname, "/auth/account");
+  assert.doesNotMatch(callback.headers.get("location")!, /neon_auth_session_verifier/);
+  const cookie = callback.headers.getSetCookie().find((value) => value.startsWith("__Secure-neon-auth.session_token="))?.split(";")[0];
+  assert.ok(cookie, "Native middleware must store the exchanged session token");
+  const account = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: cookie } })).text();
+  assert.match(account, /synthetic-other-user/);
+  const admin = await (await fetch(`${origin}/admin`, { headers: { Cookie: cookie } })).text();
+  assert.match(admin, /Acceso restringido/);
+  assert.doesNotMatch(admin, /Crear referencia/);
+  const invalid = await fetch(`${origin}/auth/account?neon_auth_session_verifier=invalid`, {
+    redirect: "manual", headers: { Cookie: "__Secure-neon-auth.session_challenge=synthetic-challenge" },
+  });
+  assert.match(invalid.headers.get("location") ?? "", /auth\/sign-in/);
+  assert.ok(!invalid.headers.getSetCookie().some((value) => value.startsWith("__Secure-neon-auth.session_token=")));
 });
 
 test("verified wrong accounts and forged cookies cannot read administration", async () => {
@@ -251,6 +272,6 @@ test("native sign-out clears access and a reused session token cannot administer
     const admin = await fetch(`${origin}/admin`, { headers: { Cookie: identity.ownerCookie }, redirect: "manual" });
     assert.ok([302, 307].includes(admin.status));
     const account = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: identity.ownerCookie } })).text();
-    assert.match(account, /No has iniciado sesión/);
+    assert.match(account, /Continuar con Google/);
   } finally { identity.restoreOwner(); }
 });

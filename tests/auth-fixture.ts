@@ -14,10 +14,18 @@ export async function authFixture() {
     response.setHeader("Content-Type", "application/json");
     response.setHeader("Cache-Control", "no-store");
     if (unavailable) { response.writeHead(503); response.end(JSON.stringify({ message: "Synthetic outage" })); return; }
-    const token = request.headers.cookie?.match(/__Secure-neon-auth\.session_token=([^;]+)/)?.[1];
-    const userId = token ? sessions.get(token) : undefined;
+    let token = request.headers.cookie?.match(/__Secure-neon-auth\.session_token=([^;]+)/)?.[1];
     const url = new URL(request.url ?? "/", "http://localhost");
     if (url.pathname === "/auth/get-session") {
+      const verifier = url.searchParams.get("neon_auth_session_verifier");
+      if (verifier) {
+        if (verifier !== "synthetic-verifier" || !request.headers.cookie?.includes("__Secure-neon-auth.session_challenge=synthetic-challenge")) {
+          response.writeHead(401); response.end("null"); return;
+        }
+        token = otherToken;
+        response.setHeader("Set-Cookie", `__Secure-neon-auth.session_token=${otherToken}; Path=/; HttpOnly; Secure; SameSite=Lax`);
+      }
+      const userId = token ? sessions.get(token) : undefined;
       if (!userId) { response.end("null"); return; }
       const now = new Date().toISOString();
       response.end(JSON.stringify({
