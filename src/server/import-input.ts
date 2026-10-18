@@ -81,12 +81,12 @@ function txtRecords(content: string): SourceRecord[] {
     const versus = body.match(/^(.+?)\s+v\s+(.+?)(?:\s{2,}(.+))?$/);
     if (versus) { home = versus[1]; away = versus[2]; result = versus[3] ?? ""; }
     else {
-      const middle = body.match(/^(.+?)\s{2,}(\d+-\d+(?:\s+pen\.\s+\d+-\d+)?(?:\s+a\.e\.t\.)?(?:\s+\([^)]*\))?)\s{2,}(.+)$/);
+      const middle = body.match(/^(.+?)\s{2,}(-|\d+-\d+(?:\s+pen\.\s+\d+-\d+)?(?:\s+a\.e\.t\.)?(?:\s+\([^)]*\))?)\s{2,}(.+)$/);
       if (!middle) throw new ImportError(`Línea ${index + 1} de Football.TXT no compatible. No se ha importado ningún registro.`);
       home = middle[1]; result = middle[2]; away = middle[3];
     }
     let homeScore: number | null = null, awayScore: number | null = null;
-    if (result) {
+    if (result && result !== "-") {
       const parsed = result.match(/^(?:\d+-\d+\s+pen\.\s+)?(\d+)-(\d+)(?:\s+a\.e\.t\.)?(?:\s+\([^)]*\))?$/);
       if (!parsed) throw new ImportError(`Resultado no compatible en la línea ${index + 1}.`);
       [homeScore, awayScore] = score([Number(parsed[1]), Number(parsed[2])]);
@@ -96,7 +96,7 @@ function txtRecords(content: string): SourceRecord[] {
   }
   return records;
 }
-export function parseImport(input: ImportInput) {
+export function parseImport(input: Pick<ImportInput, "content" | "repository" | "path" | "revision" | "format" | "offset">) {
   if (Buffer.byteLength(input.content, "utf8") > MAX_IMPORT_BYTES || !input.content.trim()) throw new ImportError("Selecciona un archivo de hasta 350000 bytes.");
   if (!["openfootball/football.json", "openfootball/espana"].includes(input.repository) || !/^[a-zA-Z0-9/_().-]{1,200}$/.test(input.path) || input.path.split("/").some((p) => p === "..") || !/^[a-f0-9]{40}$/.test(input.revision)) throw new ImportError("Indica repositorio OpenFootball, ruta relativa y revisión Git completa de 40 caracteres.");
   if (!["json", "txt"].includes(input.format) || !Number.isSafeInteger(input.offset) || input.offset < 0 || input.offset > 2000) throw new ImportError("Formato o inicio de lote no válido.");

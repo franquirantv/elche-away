@@ -50,9 +50,9 @@ test("JSON variants normalize consistently, reject malformed facts, and bound El
 });
 
 test("Football.TXT covers both fixture layouts, year context, extra time and shootouts without inventing dates", () => {
-  const content = `= Spain Copa del Rey 2030/31\n\n▪ Round 1\nWed Oct 30 2030\n  20:30 Elche CF          v Club de prueba           5-4 pen. 2-2 a.e.t. (1-1, 0-0)\n▪ Round 2\nSun Jan 5\n  Elche CF           3-1 (1-0)  Club de prueba\n▪ Round 3\n  Elche CF           v Club de prueba\n`;
+  const content = `= Spain Copa del Rey 2030/31\n\n▪ Round 1\nWed Oct 30 2030\n  20:30 Elche CF          v Club de prueba           5-4 pen. 2-2 a.e.t. (1-1, 0-0)\n▪ Round 2\nSun Jan 5\n  Elche CF           3-1 (1-0)  Club de prueba\n▪ Round 3\n  Elche CF           v Club de prueba\n  Elche CF           -  Otro club\n`;
   const rows = parseImport(base({ content, format: "txt", repository: "openfootball/espana" }));
-  assert.deepEqual(rows.map((r) => [r.playedOn, r.homeScore, r.awayScore]), [["2030-10-30", 2, 2], ["2031-01-05", 3, 1], [null, null, null]]);
+  assert.deepEqual(rows.map((r) => [r.playedOn, r.homeScore, r.awayScore]), [["2030-10-30", 2, 2], ["2031-01-05", 3, 1], [null, null, null], [null, null, null]]);
   assert.throws(() => parseImport(base({ content: content + "unrecognized fixture", format: "txt" })), /Línea/);
 });
 

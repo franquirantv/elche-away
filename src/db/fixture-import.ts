@@ -18,7 +18,7 @@ export type ImportPreview = {
   rows: ImportRow[]; candidates: { id: string; label: string }[]; snapshot: string;
   total: number; offset: number; seasonLabel: string; competitionLabel: string;
 };
-export function sourceIdentity(input: ImportInput, record: SourceRecord) {
+export function sourceIdentity(input: Pick<ImportInput, "repository" | "path">, record: SourceRecord) {
   return digest({ repository: input.repository, path: input.path, record });
 }
 function factsOf(row: ImportFacts): ImportFacts { return Object.fromEntries(factKeys.map((key) => [key, row[key]])) as ImportFacts; }
@@ -30,13 +30,19 @@ function mergedFacts(existing: ImportFacts, incoming: ImportFacts): ImportFacts 
   validateMatch(merged);
   return merged;
 }
-export async function previewFixtureImport(db: ImportDatabase, input: ImportInput): Promise<ImportPreview> {
+export type PreviewReferences = {
+  clubs: { id: string; name: string }[];
+  seasons: { id: string; label: string }[];
+  competitions: { id: string; name: string }[];
+};
+export type PreviewContext = PreviewReferences & { localRows: (typeof matches.$inferSelect)[]; sourceRows: (typeof matchSources.$inferSelect)[] };
+export async function previewFixtureImport(db: ImportDatabase, input: ImportInput, context?: PreviewContext): Promise<ImportPreview> {
   const batch = selectedRecords(input);
   const seasonId = validId(input.seasonId), competitionId = validId(input.competitionId);
-  const [season] = await db.select().from(seasons).where(eq(seasons.id, seasonId));
-  const [competition] = await db.select().from(competitions).where(eq(competitions.id, competitionId));
+  const [season] = context ? context.seasons.filter((s) => s.id === seasonId) : await db.select().from(seasons).where(eq(seasons.id, seasonId));
+  const [competition] = context ? context.competitions.filter((c) => c.id === competitionId) : await db.select().from(competitions).where(eq(competitions.id, competitionId));
   if (!season || !competition) throw new ImportError("Selecciona una temporada y competición existentes.");
-  const clubRows = await db.select().from(clubs);
+  const clubRows = context ? [...context.clubs] : await db.select().from(clubs);
   const clubMap = new Map(clubRows.map((club) => [club.id, club.name]));
   const localClub = (name: string) => {
     const id = input.mappings[name];
@@ -45,10 +51,10 @@ export async function previewFixtureImport(db: ImportDatabase, input: ImportInpu
     return id;
   };
   const sourceIds = batch.records.map((r) => sourceIdentity(input, r));
-  const sources = await db.select().from(matchSources).where(and(eq(matchSources.provider, "openfootball"), inArray(matchSources.externalFixtureId, sourceIds))).orderBy(matchSources.id);
+  const sources = context ? context.sourceRows.filter((s) => s.provider === "openfootball" && sourceIds.includes(s.externalFixtureId)) : await db.select().from(matchSources).where(and(eq(matchSources.provider, "openfootball"), inArray(matchSources.externalFixtureId, sourceIds))).orderBy(matchSources.id);
   const linkedIds = sources.map((s) => s.matchId);
   // Include incomplete manual history as candidates, never silently declare it absent.
-  const local = await db.select().from(matches).where(or(eq(matches.seasonId, seasonId), sql`${matches.seasonId} is null`, linkedIds.length ? inArray(matches.id, linkedIds) : undefined)).orderBy(matches.id).limit(1001);
+  const local = context ? context.localRows.filter((m) => m.seasonId === seasonId || m.seasonId === null || linkedIds.includes(m.id)) : await db.select().from(matches).where(or(eq(matches.seasonId, seasonId), sql`${matches.seasonId} is null`, linkedIds.length ? inArray(matches.id, linkedIds) : undefined)).orderBy(matches.id).limit(1001);
   if (local.length > 1000) throw new ImportError("Demasiados candidatos locales. Completa las temporadas desconocidas antes de importar.");
   const rows: ImportRow[] = batch.records.map((record) => {
     const fingerprint = digest(record), sourceId = sourceIdentity(input, record);
