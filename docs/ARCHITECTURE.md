@@ -86,6 +86,8 @@ Load the interactive renderer only on the client, passing minimal visited-stadiu
 
 ## Environments and releases
 
+Milestone 6 release preparation, offline configuration bindings, synthetic backup/restore rehearsal and owner authorization gates are documented in [RELEASE](RELEASE.md). This does not authorize external provisioning or publication.
+
 One Vercel project; separate local, preview and production secrets/data. Local development uses a nonproduction Neon database/branch. Preview writes require isolated disposable data, otherwise disable them. Start with a shared synthetic nonproduction database only if work is serialized; add branch-per-preview when concurrent schema changes justify it. Branching production copies data too: do not propagate private/auth data to previews.
 
 Use `pg` (node-postgres) with the Drizzle node-postgres adapter: current Neon guidance for Node/Vercel and full transaction/savepoint support fit this application. This replaces the provisional serverless-driver suggestion; no Edge/HTTP transport is required. Keep a small reused runtime pool; evaluate Vercel pool lifecycle integration at deployment, without installing hosting-specific runtime services now. Keep connection/auth/storage secrets server-only. Environment configuration should fail clearly when required secrets are missing; public assets need no database credentials. Keep selected function/database regions close. Verify current free-tier eligibility, quotas and limits before provisioning; no guaranteed zero-cost assumption.
