@@ -29,7 +29,7 @@ export function ReferenceForm({ kind, record, tierOptions, protectedClub = false
       <label className="admin-field" htmlFor={`${prefix}-tier`}><span>División del Elche (opcional)</span><select id={`${prefix}-tier`} name="elcheTierId" defaultValue={field("elcheTierId")} aria-invalid={Boolean(state.errors?.elcheTierId)}><option value="">Desconocida</option>{tierOptions.map((tier) => <option value={tier.id} key={tier.id}>{tier.name}</option>)}</select>{state.errors?.elcheTierId && <span className="form-error">{state.errors.elcheTierId}</span>}</label>
     </> : input("name", "Nombre", "text", true)}
     {kind === "tiers" && input("level", "Nivel en la pirámide", "number", true)}
-    {kind === "clubs" && input("crestPath", "Escudo local (opcional): /crests/archivo.webp")}
+    {kind === "clubs" && !record && <p className="admin-hint">Guarda primero el club para poder subir su escudo.</p>}
     {kind === "stadiums" && <>
       {input("city", "Ciudad (opcional)")}
       <label className="admin-field" htmlFor={`${prefix}-province`}><span>Provincia (opcional)</span><select id={`${prefix}-province`} name="provinceCode" defaultValue={field("provinceCode")} aria-invalid={Boolean(state.errors?.provinceCode)}><option value="">Desconocida</option>{Object.entries(provinces).sort((a, b) => a[1].name.localeCompare(b[1].name, "es")).map(([code, province]) => <option key={code} value={code}>{province.name}</option>)}</select>{state.errors?.provinceCode && <span className="form-error">{state.errors.provinceCode}</span>}</label>

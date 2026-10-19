@@ -11,7 +11,7 @@ function main() {
   }
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--hostname", "localhost", "--port", "3001"], {
     stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: database, NEON_AUTH_BASE_URL: baseUrl, NEON_AUTH_COOKIE_SECRET: secret, ADMIN_USER_ID: process.env.TEST_ADMIN_USER_ID ?? "", ARCHIVE_TEST_SERVER: "manual" },
+    env: { ...process.env, DATABASE_URL: database, NEON_AUTH_BASE_URL: baseUrl, NEON_AUTH_COOKIE_SECRET: secret, ADMIN_USER_ID: process.env.TEST_ADMIN_USER_ID ?? "", ARCHIVE_TEST_SERVER: "manual", STORAGE_ENVIRONMENT: "testing" },
   });
   child.on("exit", (code) => { process.exitCode = code ?? 1; });
   child.on("error", () => { console.error("No se pudo iniciar el entorno de testing."); process.exitCode = 1; });

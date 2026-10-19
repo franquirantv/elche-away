@@ -30,7 +30,7 @@ export function validateReference(kind: ReferenceKind, v: ReferenceValues) {
   const errors: Record<string, string> = {};
   const required = kind === "seasons" ? "label" : "name";
   if (!v[required] || v[required].length > 200) errors[required] = "Introduce entre 1 y 200 caracteres.";
-  if (kind === "clubs" && v.crestPath && !/^\/crests\/[a-zA-Z0-9_-]+\.(png|jpg|jpeg|webp|svg)$/.test(v.crestPath)) errors.crestPath = "Usa un archivo local de /crests/, sin subcarpetas ni URL externa.";
+  if (kind === "clubs" && v.crestPath) errors.crestPath = "Gestiona el escudo desde la subida de imágenes del club.";
   if (kind === "stadiums") {
     if (v.city.length > 200) errors.city = "Máximo 200 caracteres.";
     if (v.provinceCode && !provinces[v.provinceCode]) errors.provinceCode = "Selecciona una provincia válida.";

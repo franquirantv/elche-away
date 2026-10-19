@@ -4,7 +4,7 @@
 
 ## Stack instalado
 
-Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
+Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
 PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
@@ -229,6 +229,8 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
 | `/stadiums/[slug]` | Información y viajes asociados al estadio visitado. |
 | `/map` | Mapa Leaflet de estadios visitados, cobertura de coordenadas y lista alternativa. |
+| `/media/crests/[clubId]/[file]` | WebP público con caché de un escudo actualmente vinculado al club. |
+| `/api/admin/club-crest` | POST de subida, eliminación o limpieza; autorización independiente del propietario. |
 | `/auth/sign-in` | Acceso con Google. |
 | `/auth/account` | Sesión propia, identificador para configurar la allowlist y cierre de sesión. |
 | `/admin` | Partidos locales, filtros por temporada/competición, asistencia y referencias; requiere identidad configurada. |
@@ -336,18 +338,43 @@ Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lin
 
 Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La aceptación táctil en un dispositivo real y la cartografía visible siguen pendientes del propietario.
 
-### Marcadores con escudo (refinamiento final de 5)
+### Escudos desde el admin (ampliación aprobada de 5)
 
-El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo se usa si todas las visitas tienen el mismo rival conocido y su `clubs.crest_path` carga correctamente. Si hay varios rivales, alguno desconocido, falta la ruta o falla la imagen, se muestra el badge neutro «ea.». Un único badge por estadio; la selección usa borde cálido y halo.
+Desde `/admin?section=clubs`, crea primero el club o abre uno existente. «Subir escudo»/«Reemplazar escudo» admite PNG, JPEG y WebP de hasta **1 MB (1.000.000 bytes)**. Se valida el contenido real, se rechazan SVG/animaciones y se guarda una copia WebP sin metadatos, de hasta 512×512, con transparencia y proporciones conservadas. «Eliminar escudo» exige confirmación y conserva el club. Ya no se gestionan archivos en `public/crests/`.
 
-No se incluyen ni generan escudos de clubes reales. Para incorporar un asset suministrado y adecuado: crear `public/crests/` si no existe, guardar allí el archivo (PNG, WebP, JPG, JPEG o SVG de confianza) y editar en `/admin` el campo «Escudo local» del **club**, por ejemplo `/crests/archivo.webp`. Es una referencia reutilizable, sin proveedor externo ni subida de archivos. Usar imágenes recortadas al contenido y con fondo transparente cuando sea posible.
+El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo aparece si todas las visitas tienen el mismo rival conocido y su archivo carga. Varios rivales, alguno desconocido, falta de imagen o fallo de Storage producen el badge neutro «ea.». La selección mantiene borde cálido/halo y sincronización pin–tarjeta. No se incluyen escudos reales en el repositorio.
 
-Revisión visual en escritorio y móvil:
+Neon Object Storage fue aprobado y confirmado disponible en el plan Free, región Frankfurt. Cuotas actuales: 5 GB de objetos por proyecto y 5 GB mensuales de transferencia pública compartida con el resto de servicios. Mantener Free y vigilar consumo para conservar 0 €; no contratar upgrades. [Límites oficiales](https://neon.com/docs/introduction/plans). Las pruebas reales de conectividad solo crean y eliminan sus propios objetos sintéticos en los buckets no productivos.
 
-1. Abrir `/map`: sin assets todos los estadios con coordenadas deben conservar un badge «ea.» de tamaño consistente, con forma circular y punta de mapa.
-2. Elegir una tarjeta y después otro pin: comprobar halo/borde del seleccionado, popup, desplazamiento del carrusel y enlace al historial; probar también Tab y Enter. Los viajes especiales siguen identificados mediante texto en popup/card.
-3. Cuando haya un asset local apropiado, asignarlo a un rival que sea el único conocido en todas las visitas a un estadio. Comprobar que el escudo queda completo, centrado y sin deformarse. Repetir con imágenes anchas y altas: el marco conserva el tamaño.
-4. Probar una ruta local inexistente o bloquear el archivo en las herramientas de red: el badge neutro sustituye la imagen, sin icono roto y conservando interacción. Con visitas frente a varios rivales o una con rival desconocido, siempre debe aparecer el neutro. Restaurar los datos de prueba.
-5. En móvil a 390/320 px y en dispositivo real, comprobar legibilidad del escudo, objetivo táctil, popup por encima de tarjetas, selección y zoom. La atribución OSM y la lista sin JavaScript siguen disponibles.
+Configuración (todos los secretos solo en servidor, nunca `NEXT_PUBLIC_*`):
 
-Verificación de marcadores (2026-10-19): lint y typecheck correctos; build con Webpack correcto (Turbopack mantiene el fallo de permisos del entorno). Chrome verificó badges neutros, fallback de imagen rota, rechazo de URL externa e imágenes geométricas temporales de proporciones distintas; comprobación adicional del mapa en escritorio y a 390 px con tiles bloqueados, selección y popup visibles. Tras corregir la conexión de testing, `npm test` pasó con 57/57 pruebas, sin fallos ni omisiones, incluida la nueva prueba de consenso de rivales. La base temporal aislada se creó y eliminó correctamente; no se usó desarrollo como sustituto. La aceptación final del milestone sigue pendiente.
+| Variable | Development | Testing |
+| --- | --- | --- |
+| Credencial S3 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `TEST_AWS_ACCESS_KEY_ID`, `TEST_AWS_SECRET_ACCESS_KEY` |
+| Endpoint de rama | `AWS_ENDPOINT_URL_S3` | `TEST_AWS_ENDPOINT_URL_S3` |
+| Región | `AWS_REGION` | `TEST_AWS_REGION` |
+| Bucket `public_read` | `STORAGE_BUCKET` | `TEST_STORAGE_BUCKET` |
+| Host PostgreSQL sin `-pooler` | `STORAGE_DATABASE_HOST` | `TEST_STORAGE_DATABASE_HOST` |
+
+El endpoint y la credencial deben ser distintos entre development/testing, y cada host debe coincidir con su conexión PostgreSQL. Los bindings locales se han preparado a partir de las conexiones existentes. `npm run dev:testing` selecciona automáticamente `STORAGE_ENVIRONMENT=testing`. En Vercel preview se exige testing; producción requiere configuración explícita `STORAGE_ENVIRONMENT=production` y credenciales/host propios. No se ha creado ni configurado producción. Al crear ramas, recordar que sus archivos se heredan; no copiar originales privados a previews. Usar credenciales de cada rama, no de un ancestro de producción.
+
+Comandos:
+
+- `npm run storage:check`: comprueba ambos buckets; sube una imagen geométrica temporal por entorno, comprueba lectura anónima y elimina exclusivamente sus objetos. No imprime secretos.
+- `npm run db:migrate` / `npm run db:migrate:test`: aplicar explícitamente la migración aditiva `0003_yielding_exodus.sql` antes de usar esta versión; nunca seed/reset para actualizar. Añade `clubs.crest_object_key` y la cola `storage_cleanup`, conservando datos y `crest_path` legado.
+- `npm test`: sigue usando datos PostgreSQL desechables. También comprueba actualización desde el esquema anterior en una segunda base temporal propia; las pruebas HTTP de Storage usan un simulador S3 en memoria, sin buckets reales ni secretos externos. CI no necesita credenciales de Storage.
+
+Ante respuestas perdidas o errores, recargar antes de reintentar. La comparación de la versión anterior evita sobrescribir cambios ajenos. Los archivos sustituidos/eliminados se limpian tras confirmar PostgreSQL; los fallos quedan pendientes. «Limpiar escudos pendientes», en Clubes, reintenta hasta diez objetos por petición sin borrar escudos en uso. Las subidas interrumpidas mantienen una reserva de una hora antes de poder limpiarse. No hay tareas automáticas. La ruta pública de la aplicación se cachea hasta un día; las URLs directas del bucket pueden conservar copias en caché hasta un año. Retirar un archivo no revoca copias públicas ya cacheadas.
+
+Aceptación manual en escritorio y móvil:
+
+1. Reiniciar el servidor tras actualizar configuración/migración. Entrar como propietario en `/admin?section=clubs` y subir una imagen apropiada. Comprobar preview y persistencia tras recargar.
+2. Reemplazarla: debe cambiar la imagen y su clave; renombrar el club después no debe borrar el escudo. Eliminar con confirmación: el club permanece y el mapa recupera «ea.».
+3. Probar archivo mayor de 1 MB, SVG y un archivo que no sea una imagen renombrado a PNG: deben rechazarse. Sin sesión o con usuario ajeno no se puede subir, reemplazar, eliminar ni limpiar.
+4. En `/map`, comprobar el escudo solo para un estadio cuyas visitas compartan rival conocido. Varios rivales o alguna visita desconocida mantienen el neutro. Bloquear la URL `/media/crests/*` en red: el badge neutro conserva la interacción.
+5. En escritorio y móvil (390/320 px y dispositivo real), comprobar imagen completa y sin deformación, tamaño consistente para proporciones distintas, borde/halo seleccionado, Tab/Enter, pin → tarjeta y tarjeta → popup, zoom, atribución OSM y navegación sin JavaScript.
+6. Usar `npm run dev:testing` y comprobar que sus cambios no afectan a development. Para simular fallos de Storage se dispone de las pruebas automáticas de recuperación; no cambiar credenciales de producción ni borrar objetos ajenos para probar.
+
+La integración S3 y la separación de entornos pueden reutilizarse para fotos en un milestone posterior; no se han implementado fotos, galerías ni subida de originales.
+
+Verificación de la ampliación Storage (2026-10-19): lint y typecheck correctos; `npm test` con 62/62 pruebas, sin fallos ni omisiones, incluidas actualización desde 0002, autorización HTTP, conversión, reemplazo concurrente y recuperación ante fallos. Bases temporales propias eliminadas. Build con Webpack correcto; Turbopack mantiene el bloqueo de permisos del entorno. Buckets reales de development/testing verificados con objetos sintéticos propios eliminados. Migraciones aplicadas en ambos entornos sin seed/reset y con huellas de datos existentes idénticas. `npm ci --dry-run --ignore-scripts` correcto. La aceptación manual de la subida de escudos sigue pendiente; no se ha configurado producción.

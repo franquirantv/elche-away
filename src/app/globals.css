@@ -168,3 +168,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
   .map-card { flex-basis: 245px; }
 }
 @media (prefers-reduced-motion: reduce) { .map-carousel { scroll-behavior: auto; } }
+
+.club-crest-preview { object-fit: contain; background: white; border: 1px solid #dce3dc; border-radius: 4px; }
+.crest-form { padding-top: 20px; border-top: 1px solid #dce3dc; }

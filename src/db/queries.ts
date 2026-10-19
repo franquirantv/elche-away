@@ -46,7 +46,7 @@ export function listVisitedStadiums(db: QueryDatabase) {
     id: stadiums.id, slug: stadiums.slug, name: stadiums.name, city: stadiums.city, provinceCode: stadiums.provinceCode,
     latitude: stadiums.latitude, longitude: stadiums.longitude,
     isSpecial: sql<boolean>`bool_or(${attendance.isSpecial})`,
-    markerCrestPath: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.crestPath}) end`,
+    markerCrestKey: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.crestObjectKey}) end`,
     markerClubName: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.name}) end`,
     visits: sql<number>`count(*)::integer`,
   }).from(stadiums)

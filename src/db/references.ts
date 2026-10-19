@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "./connection";
-import { clubs, competitions, seasons, stadiums, tiers } from "./schema";
+import { clubs, competitions, seasons, stadiums, tiers, storageCleanup } from "./schema";
 import { ELCHE_CLUB_ID } from "../lib/identity";
 import { availableSlug } from "../lib/slugs";
 import { InvalidReference, validId, validateReference, type ReferenceKind, type ReferenceValues } from "../server/reference-input";
@@ -26,6 +26,10 @@ export async function writeReference(db: ReferenceDatabase, kind: ReferenceKind,
     if (!id || v.confirmDelete !== "yes") throw new InvalidReference({ confirmDelete: "Confirma el borrado." });
     if (kind === "clubs" && id === ELCHE_CLUB_ID) throw new InvalidReference({ id: "El club de referencia Elche CF no se puede borrar." });
     const table = { clubs, stadiums, competitions, tiers, seasons }[kind];
+    if (kind === "clubs") {
+      const [club] = await db.select().from(clubs).where(eq(clubs.id, id)).for("update");
+      if (club?.crestObjectKey) await db.insert(storageCleanup).values({ objectKey: club.crestObjectKey, notBefore: new Date() }).onConflictDoNothing();
+    }
     const removed = await db.delete(table).where(eq(table.id, id)).returning({ id: table.id });
     if (!removed.length) throw new InvalidReference({ id: "La referencia ya no existe." });
     return;
@@ -34,7 +38,7 @@ export async function writeReference(db: ReferenceDatabase, kind: ReferenceKind,
   if (kind === "clubs" || kind === "stadiums") {
     const table = kind === "clubs" ? clubs : stadiums;
     const changes = kind === "clubs"
-      ? { name: v.name, crestPath: v.crestPath || null }
+      ? { name: v.name }
       : { name: v.name, city: v.city || null, provinceCode: v.provinceCode || null, latitude: v.latitude ? Number(v.latitude) : null, longitude: v.longitude ? Number(v.longitude) : null };
     if (id) {
       // Never regenerate a slug when names or location are corrected.

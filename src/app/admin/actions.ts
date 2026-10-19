@@ -13,7 +13,7 @@ export async function mutateReference(_previous: ReferenceState, form: FormData)
     // Never trust a user ID, email or role from form data, headers or the client.
     await requireAdmin();
     values = readReferenceInput(form);
-    await writeReference(getDatabase(), referenceKind(values.kind), values);
+    await getDatabase().transaction((tx) => writeReference(tx, referenceKind(values!.kind), values!));
     revalidatePath("/admin");
     revalidatePath("/map");
     revalidatePath("/trips", "layout");
