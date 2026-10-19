@@ -24,7 +24,14 @@ test("release preflight rejects missing bindings, mismatched storage, test mode 
 });
 
 test("Vercel public framework metadata does not block releases; unrecognized public secrets still fail", () => {
-  const metadata = { NEXT_PUBLIC_VERCEL_URL: "synthetic.vercel.app", NEXT_PUBLIC_VERCEL_ENV: "preview", NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "synthetic-sha" };
+  // Full set of names from the owner's failed Vercel build, synthetic values only.
+  const names = [
+    "GIT_COMMIT_REF", "GIT_PULL_REQUEST_ID", "GIT_PREVIOUS_SHA", "GIT_COMMIT_MESSAGE", "GIT_COMMIT_AUTHOR_NAME",
+    "GIT_REPO_ID", "GIT_REPO_OWNER", "PROJECT_ID", "DEPLOYMENT_ID", "ENV", "GIT_COMMIT_AUTHOR_LOGIN",
+    "BRANCH_URL", "GIT_COMMIT_SHA", "OBSERVABILITY_CLIENT_CONFIG", "URL", "GIT_REPO_SLUG", "GIT_PROVIDER",
+    "PROJECT_PRODUCTION_URL", "TARGET_ENV",
+  ];
+  const metadata = Object.fromEntries(names.map((name) => [`NEXT_PUBLIC_VERCEL_${name}`, "synthetic-public-metadata"]));
   assert.doesNotThrow(() => validateReleaseConfig({ ...preview, ...metadata }));
   for (const key of ["NEXT_PUBLIC_DATABASE_URL", "NEXT_PUBLIC_VERCEL_SECRET", "NEXT_PUBLIC_VERCEL_AWS_SECRET_ACCESS_KEY"]) {
     assert.throws(() => validateReleaseConfig({ ...preview, ...metadata, [key]: "synthetic-secret" }));

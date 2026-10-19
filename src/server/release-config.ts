@@ -8,7 +8,7 @@ const releaseErrors = {
   OWNER: "Configure the verified ADMIN_USER_ID, or explicitly use the first-access bootstrap procedure.",
   COOKIE: "NEON_AUTH_COOKIE_SECRET is missing or shorter than 32 characters.",
   TEST_SERVER: "Remove ARCHIVE_TEST_SERVER from deployment configuration.",
-  PUBLIC_VARIABLES: "Unexpected NEXT_PUBLIC_* configuration; only documented Vercel metadata is allowed.",
+  PUBLIC_VARIABLES: "Unexpected NEXT_PUBLIC_* configuration; only reviewed Vercel metadata is allowed.",
   STORAGE: "Review Storage credentials, endpoint, bucket, environment and STORAGE_DATABASE_HOST binding.",
 } as const;
 
@@ -24,12 +24,13 @@ export function releaseFailureMessage(error: unknown) {
     : "Release configuration failed [UNKNOWN]. Review docs/RELEASE.md; no values or credentials were logged.";
 }
 
-// Exact names from Vercel's framework-environment-variables documentation.
+// Exact names from Vercel documentation and observed hosted build metadata.
 // Do not allow arbitrary NEXT_PUBLIC_VERCEL_* names or application secrets.
 const vercelPublicMetadata = new Set([
   "ENV", "TARGET_ENV", "URL", "BRANCH_URL", "PROJECT_PRODUCTION_URL", "HASH_SALT",
   "GIT_PROVIDER", "GIT_REPO_SLUG", "GIT_REPO_OWNER", "GIT_REPO_ID", "GIT_COMMIT_REF",
   "GIT_COMMIT_SHA", "GIT_COMMIT_MESSAGE", "GIT_COMMIT_AUTHOR_LOGIN", "GIT_COMMIT_AUTHOR_NAME", "GIT_PULL_REQUEST_ID",
+  "GIT_PREVIOUS_SHA", "PROJECT_ID", "DEPLOYMENT_ID", "OBSERVABILITY_CLIENT_CONFIG",
 ].map((name) => `NEXT_PUBLIC_VERCEL_${name}`));
 
 // Offline validation only: bindings must be reviewed against the service consoles.
