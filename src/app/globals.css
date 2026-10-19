@@ -131,7 +131,15 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .stadium-map { height: 100%; width: 100%; isolation: isolate; }
 .map-attribution { position: absolute; z-index: 2; top: 8px; right: 8px; max-width: calc(100% - 80px); background: white; padding: 4px 8px; font-size: 11px; overflow-wrap: anywhere; }
 .map-attribution a { text-decoration: underline; }
-.stadium-marker { display: grid; place-items: center; color: #155d43; font-size: 28px; text-shadow: 0 0 3px white, 0 0 6px white; }
+/* Leaflet owns the marker transform; animate only the inner badge. */
+.stadium-marker { background: transparent; }
+.stadium-badge { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: 2px; border: 3px solid #155d43; border-radius: 50%; background: white; color: #155d43; box-shadow: 0 2px 7px #19362c50; transition: scale .16s ease; }
+.stadium-badge::after { content: ""; position: absolute; bottom: -10px; left: 13px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid #155d43; }
+.stadium-badge-image { width: 30px; height: 30px; object-fit: contain; }
+.stadium-badge-neutral { font: 700 20px/1 Arial, Helvetica, sans-serif; letter-spacing: -1px; }
+.stadium-marker.is-selected .stadium-badge { scale: 1.12; border-color: #70421c; box-shadow: 0 0 0 4px #e5c097, 0 3px 9px #19362c60; }
+.stadium-marker.is-selected .stadium-badge::after { border-top-color: #70421c; }
+@media (prefers-reduced-motion: reduce) { .stadium-badge { transition: none; } }
 .stadium-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
 .stadium-map .leaflet-popup-content { max-width: calc(100vw - 130px); overflow-wrap: anywhere; }
 .stadium-map .leaflet-popup-content a { text-decoration: underline; font-weight: 700; }

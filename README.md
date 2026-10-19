@@ -335,3 +335,19 @@ La aceptación visual/táctil y el fallo real de tiles requieren estas comprobac
 Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lint`, `npm run typecheck` y `npm test` correctos (55/55, sin omisiones; base temporal eliminada). `npm run build` con Turbopack falló por permisos al abrir un puerto local durante el procesamiento CSS; `npm run build -- --webpack` pasó. Aceptación manual pendiente.
 
 Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La aceptación táctil en un dispositivo real y la cartografía visible siguen pendientes del propietario.
+
+### Marcadores con escudo (refinamiento final de 5)
+
+El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo se usa si todas las visitas tienen el mismo rival conocido y su `clubs.crest_path` carga correctamente. Si hay varios rivales, alguno desconocido, falta la ruta o falla la imagen, se muestra el badge neutro «ea.». Un único badge por estadio; la selección usa borde cálido y halo.
+
+No se incluyen ni generan escudos de clubes reales. Para incorporar un asset suministrado y adecuado: crear `public/crests/` si no existe, guardar allí el archivo (PNG, WebP, JPG, JPEG o SVG de confianza) y editar en `/admin` el campo «Escudo local» del **club**, por ejemplo `/crests/archivo.webp`. Es una referencia reutilizable, sin proveedor externo ni subida de archivos. Usar imágenes recortadas al contenido y con fondo transparente cuando sea posible.
+
+Revisión visual en escritorio y móvil:
+
+1. Abrir `/map`: sin assets todos los estadios con coordenadas deben conservar un badge «ea.» de tamaño consistente, con forma circular y punta de mapa.
+2. Elegir una tarjeta y después otro pin: comprobar halo/borde del seleccionado, popup, desplazamiento del carrusel y enlace al historial; probar también Tab y Enter. Los viajes especiales siguen identificados mediante texto en popup/card.
+3. Cuando haya un asset local apropiado, asignarlo a un rival que sea el único conocido en todas las visitas a un estadio. Comprobar que el escudo queda completo, centrado y sin deformarse. Repetir con imágenes anchas y altas: el marco conserva el tamaño.
+4. Probar una ruta local inexistente o bloquear el archivo en las herramientas de red: el badge neutro sustituye la imagen, sin icono roto y conservando interacción. Con visitas frente a varios rivales o una con rival desconocido, siempre debe aparecer el neutro. Restaurar los datos de prueba.
+5. En móvil a 390/320 px y en dispositivo real, comprobar legibilidad del escudo, objetivo táctil, popup por encima de tarjetas, selección y zoom. La atribución OSM y la lista sin JavaScript siguen disponibles.
+
+Verificación de marcadores (2026-10-19): lint y typecheck correctos; build con Webpack correcto (Turbopack mantiene el fallo de permisos del entorno). Chrome verificó badges neutros, fallback de imagen rota, rechazo de URL externa e imágenes geométricas temporales de proporciones distintas; comprobación adicional del mapa en escritorio y a 390 px con tiles bloqueados, selección y popup visibles. `npm test` se intentó pero no pudo crear su base temporal: la conexión configurada de testing rechaza autenticación (`28P01`). La nueva prueba de consenso de rivales y la suite completa quedan pendientes hasta corregir `TEST_DATABASE_URL`; no se usó desarrollo como sustituto. La aceptación final del milestone sigue pendiente.

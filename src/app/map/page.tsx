@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Mapa" };
 
 export default async function MapPage() {
   const stadiums = await getVisitedStadiums();
-  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial }));
+  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: stadium.markerCrestPath, crestClubName: stadium.markerClubName }));
   const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
   const tiles = mapTileConfig();
   return <div className="page-content map-page">

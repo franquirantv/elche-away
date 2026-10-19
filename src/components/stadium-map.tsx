@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { createStadiumBadge } from "@/lib/stadium-badge";
 
-export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean };
+export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean; crestPath: string | null; crestClubName: string | null };
 export type TileConfig = { url: string; attributionText: string; attributionUrl: string; maxZoom: number };
 
 export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles: TileConfig }) {
@@ -48,17 +49,26 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
           details.textContent = `${stadium.visits} ${stadium.visits === 1 ? "visita" : "visitas"}${stadium.isSpecial ? " · Viaje especial" : ""}`;
           popup.append(link, location, details);
           const marker = L.marker([stadium.latitude, stadium.longitude], {
-            title: stadium.name, alt: stadium.name,
-            icon: L.divIcon({ className: "stadium-marker", html: `<span aria-hidden="true">${stadium.isSpecial ? "★" : "●"}</span>`, iconSize: [44, 44], iconAnchor: [22, 22] }),
+            title: stadium.crestClubName ? `${stadium.name} · Rival de las visitas: ${stadium.crestClubName}` : stadium.name,
+            alt: stadium.name,
+            icon: L.divIcon({ className: "stadium-marker", html: createStadiumBadge(stadium.crestPath), iconSize: [48, 56], iconAnchor: [24, 56], popupAnchor: [0, -48] }),
           }).bindPopup(popup, { maxWidth: 260, autoPanPaddingTopLeft: [24, 60], autoPanPaddingBottomRight: [24, 230] }).addTo(map);
           marker.on("popupopen", () => {
             if (cancelled) return;
             setSelected(stadium.slug);
+            for (const [slug, item] of currentMarkers) {
+              const active = slug === stadium.slug;
+              item.getElement()?.classList.toggle("is-selected", active);
+              item.getElement()?.setAttribute("aria-pressed", String(active));
+              item.setZIndexOffset(active ? 1000 : 0);
+            }
             const card = cards.current.get(stadium.slug);
             const track = card?.parentElement;
             // Scroll only the horizontal track, never the page or the map viewport.
             if (card && track) track.scrollTo({ left: card.offsetLeft - track.offsetLeft - (track.clientWidth - card.clientWidth) / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
           });
+          marker.getElement()?.setAttribute("aria-label", stadium.crestClubName ? `${stadium.name}. Rival de las visitas: ${stadium.crestClubName}` : stadium.name);
+          marker.getElement()?.setAttribute("aria-pressed", "false");
           currentMarkers.set(stadium.slug, marker);
         }
         // Fixed geographic bounds, independent of attendance and available coordinates.
@@ -85,7 +95,7 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
     const point = marker.getLatLng();
     const zoom = Math.min(12, tiles.maxZoom);
     // Keep the selected pin above the cards rather than hidden behind them.
-    const center = map.unproject(map.project(point, zoom).add([0, 95]), zoom);
+    const center = map.unproject(map.project(point, zoom).add([0, 10]), zoom);
     const animate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     map.stop();
     const popup = marker.getPopup();

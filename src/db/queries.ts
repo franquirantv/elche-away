@@ -7,6 +7,7 @@ import { ELCHE_CLUB_ID } from "../lib/identity";
 
 const home = alias(clubs, "home_club");
 const away = alias(clubs, "away_club");
+const opponent = alias(clubs, "visited_opponent");
 
 function attendedFixtures(db: QueryDatabase) {
   return db.select({
@@ -39,14 +40,19 @@ export async function findTrip(db: QueryDatabase, slug: string) {
 }
 
 export function listVisitedStadiums(db: QueryDatabase) {
+  // Representation of attended opponents only, never stadium ownership.
+  const unanimousOpponent = sql`count(distinct ${opponent.id}) = 1 and count(${opponent.id}) = count(*)`;
   return db.select({
     id: stadiums.id, slug: stadiums.slug, name: stadiums.name, city: stadiums.city, provinceCode: stadiums.provinceCode,
     latitude: stadiums.latitude, longitude: stadiums.longitude,
     isSpecial: sql<boolean>`bool_or(${attendance.isSpecial})`,
+    markerCrestPath: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.crestPath}) end`,
+    markerClubName: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.name}) end`,
     visits: sql<number>`count(*)::integer`,
   }).from(stadiums)
     .innerJoin(matches, eq(matches.stadiumId, stadiums.id))
     .innerJoin(attendance, eq(attendance.matchId, matches.id))
+    .leftJoin(opponent, eq(opponent.id, sql`case when ${matches.homeClubId} = ${ELCHE_CLUB_ID} then ${matches.awayClubId} when ${matches.awayClubId} = ${ELCHE_CLUB_ID} then ${matches.homeClubId} end`))
     .groupBy(stadiums.id).orderBy(stadiums.name, stadiums.id);
 }
 

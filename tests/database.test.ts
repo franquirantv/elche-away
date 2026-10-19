@@ -291,3 +291,31 @@ test("map data follows attendance, deduplicates visits and preserves unknown coo
     assert.equal((await listVisitedStadiums(tx)).find((row) => row.id === fixtureIds.ground)?.isSpecial, false);
   });
 });
+
+
+test("map crest represents a unanimous known attended opponent, never a stadium club", async () => {
+  await rolledBack(async (tx) => {
+    // Same file path must not disguise two different opponents as one club.
+    await tx.update(clubs).set({ crestPath: "/crests/synthetic-test.svg" }).where(eq(clubs.id, fixtureIds.north));
+    await tx.update(clubs).set({ crestPath: "/crests/synthetic-test.svg" }).where(eq(clubs.id, fixtureIds.south));
+    const ground = async () => (await listVisitedStadiums(tx)).find((row) => row.id === fixtureIds.ground)!;
+    assert.equal((await ground()).markerCrestPath, null);
+    assert.equal((await ground()).markerClubName, null);
+    // Elche is home in one visit, away in the other: derive the rival in both.
+    await tx.update(matches).set({ awayClubId: fixtureIds.north }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestPath, "/crests/synthetic-test.svg");
+    assert.equal((await ground()).markerClubName, "Club Norte (ejemplo)");
+    assert.equal((await ground()).visits, 2);
+    // A single unknown rival invalidates consensus even with one known rival.
+    await tx.update(matches).set({ awayClubId: null }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestPath, null);
+    await tx.update(matches).set({ homeClubId: null, awayClubId: null, homeScore: null, awayScore: null }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestPath, null);
+    // Removing that attendance restores consensus; the fixture is still there.
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestPath, "/crests/synthetic-test.svg");
+    await tx.update(clubs).set({ crestPath: null }).where(eq(clubs.id, fixtureIds.north));
+    assert.equal((await ground()).markerCrestPath, null);
+    assert.equal((await ground()).visits, 1);
+  });
+});
