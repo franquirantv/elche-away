@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { validateReleaseConfig } from "../src/server/release-config";
+import { releaseFailureMessage, validateReleaseConfig } from "../src/server/release-config";
 import { AccessDenied, assertAdminIdentity } from "../src/server/admin-policy";
 
 const preview = {
@@ -21,6 +21,34 @@ test("release preflight rejects missing bindings, mismatched storage, test mode 
     { VERCEL_ENV: "development" }, { TEST_STORAGE_DATABASE_HOST: "other.neon.tech" },
     { ARCHIVE_TEST_SERVER: "1" }, { NEXT_PUBLIC_SECRET: "synthetic" }, { DATABASE_URL: preview.DATABASE_URL.replace("verify-full", "require") },
   ]) assert.throws(() => validateReleaseConfig({ ...preview, ...change }));
+});
+
+test("Vercel public framework metadata does not block releases; unrecognized public secrets still fail", () => {
+  const metadata = { NEXT_PUBLIC_VERCEL_URL: "synthetic.vercel.app", NEXT_PUBLIC_VERCEL_ENV: "preview", NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "synthetic-sha" };
+  assert.doesNotThrow(() => validateReleaseConfig({ ...preview, ...metadata }));
+  for (const key of ["NEXT_PUBLIC_DATABASE_URL", "NEXT_PUBLIC_VERCEL_SECRET", "NEXT_PUBLIC_VERCEL_AWS_SECRET_ACCESS_KEY"]) {
+    assert.throws(() => validateReleaseConfig({ ...preview, ...metadata, [key]: "synthetic-secret" }));
+  }
+  assert.throws(() => validateReleaseConfig({ ...preview, ...metadata, VERCEL: undefined }));
+});
+
+test("preflight diagnostics identify failing blocks without reflecting credentials or raw parser errors", () => {
+  const secret = "synthetic-sensitive-value-must-never-appear";
+  for (const [change, code] of [
+    [{ DATABASE_URL: secret }, "DATABASE"], [{ RELEASE_DATABASE_HOST: secret }, "DATABASE"],
+    [{ NEON_AUTH_BASE_URL: secret }, "AUTH"], [{ RELEASE_AUTH_ORIGIN: secret }, "AUTH"],
+    [{ ADMIN_USER_ID: "" }, "OWNER"], [{ NEON_AUTH_COOKIE_SECRET: "short" }, "COOKIE"],
+    [{ RELEASE_BOOTSTRAP: secret }, "BOOTSTRAP"], [{ TEST_AWS_ENDPOINT_URL_S3: secret }, "STORAGE"],
+    [{ NEXT_PUBLIC_SECRET: secret }, "PUBLIC_VARIABLES"],
+  ] as const) {
+    assert.throws(() => validateReleaseConfig({ ...preview, ...change }), (error: unknown) => {
+      const message = releaseFailureMessage(error);
+      assert.ok(message.includes(`[${code}]`));
+      assert.ok(!message.includes(secret));
+      return true;
+    });
+  }
+  assert.ok(!releaseFailureMessage(new Error(secret)).includes(secret));
 });
 
 test("production requires its explicitly bound production storage", () => {

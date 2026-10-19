@@ -45,7 +45,7 @@ Configurar secretos por ámbito en Vercel; no copiar `.env.local` ni descargar s
 
 Los bindings RELEASE_* son valores independientes que el propietario contrasta con las consolas, no valores calculados automáticamente a partir de una credencial. Un archivo coherente puede seguir apuntando al servicio equivocado: el preflight no demuestra pertenencia de una credencial ni aislamiento remoto. Comparar hosts, ramas, IDs de usuario, endpoints y alcance de credenciales entre los tres entornos; no reutilizar credenciales Storage de un ancestro productivo. Los secretos cookie deben ser distintos. Para obtener el ID productivo, usar `/auth/account`; hasta configurarlo exactamente, el admin deniega acceso.
 
-`npm run release:check` valida **solo las variables del proceso**, sin cargar `.env.local`, conectarse ni escribir. Rechaza bindings ausentes/incoherentes, TLS distinto de verify-full, owner ausente fuera del modo de primer acceso, secret ausente, Storage incompatible, `ARCHIVE_TEST_SERVER` y cualquier `NEXT_PUBLIC_*` (no hay ninguna necesaria). No requiere conexión directa de migración ni credenciales del proveedor de fútbol. No imprimir el entorno para diagnosticarlo.
+`npm run release:check` valida **solo las variables del proceso**, sin cargar `.env.local`, conectarse ni escribir. Rechaza bindings ausentes/incoherentes, TLS distinto de verify-full, owner ausente fuera del modo de primer acceso, secret ausente, Storage incompatible, `ARCHIVE_TEST_SERVER` y variables `NEXT_PUBLIC_*` de aplicación. Se permite únicamente una lista explícita de metadatos públicos documentados que Vercel añade automáticamente a Next.js cuando `VERCEL=1`; no se permite cualquier nombre con prefijo `NEXT_PUBLIC_VERCEL_`. No requiere conexión directa de migración ni credenciales del proveedor de fútbol. No imprimir el entorno para diagnosticarlo.
 
 ### Primer acceso sin administrador configurado
 
@@ -84,3 +84,9 @@ Realizar primero el flujo completo en preview sintético; registrar fecha, commi
 La preparación local y los resultados se registran en README. Pendientes hasta intervención/autorización: inventario y coste de servicios, primer despliegue, configuración productiva/OAuth/dominio, backup real SQL+objetos y recuperación gestionada Auth, migración deliberada, smoke remoto y aceptación final. Milestone 6 permanece **en preparación** hasta resolverlos.
 
 Fuentes oficiales revisadas el 2026-10-19: [entornos Vercel](https://vercel.com/docs/deployments/environments), [backup Neon](https://neon.com/docs/manage/backup-pg-dump), [checklist Auth](https://neon.com/docs/auth/production-checklist), [política OSM](https://operations.osmfoundation.org/policies/tiles/). Revalidar planes/límites/condiciones al autorizar provisioning; no hay garantía de coste por haber pasado las pruebas locales.
+
+### Diagnóstico seguro del preflight en Vercel
+
+El log identifica el bloque fallido con un código fijo (`DATABASE`, `AUTH`, `BOOTSTRAP`, `OWNER`, `COOKIE`, `TEST_SERVER`, `PUBLIC_VARIABLES`, `STORAGE` o `ENVIRONMENT`) y las variables que revisar, sin imprimir valores, nombres arbitrarios ni errores originales de parsers. Corregir ese bloque y crear un nuevo despliegue autorizado para aplicar las variables; no desactivar `release:check`. Un error genérico antiguo no permite determinar cuál de los bloques falló.
+
+Los metadatos públicos permitidos corresponden a la [lista oficial de Vercel para Next.js](https://vercel.com/docs/environment-variables/framework-environment-variables), revisada el 2026-10-20. El preflight anterior rechazaba incluso esos metadatos legítimos; esta corrección conserva el rechazo de configuración pública no reconocida y todos los controles de aislamiento.
