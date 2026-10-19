@@ -272,3 +272,50 @@ test("home summary derives totals, coverage and oriented finished results only f
     assert.deepEqual(await readHomeSummary(tx), { trips: 0, stadiums: 0, knownVenues: 0, knownResults: 0, wins: 0, draws: 0, losses: 0 });
   });
 });
+
+
+test("map data follows attendance, deduplicates visits and preserves unknown coordinates", async () => {
+  await rolledBack(async (tx) => {
+    await tx.update(stadiums).set({ latitude: 28.46, longitude: -16.25 }).where(eq(stadiums.id, fixtureIds.ground));
+    await tx.update(stadiums).set({ latitude: 39, longitude: 2 }).where(eq(stadiums.id, fixtureIds.unvisitedGround));
+    const rows = await listVisitedStadiums(tx);
+    assert.equal(rows.length, 2);
+    const ground = rows.find((row) => row.id === fixtureIds.ground)!;
+    assert.equal(ground.latitude, 28.46);
+    assert.equal(ground.longitude, -16.25);
+    assert.equal(ground.visits, 2);
+    assert.equal(ground.isSpecial, true);
+    assert.equal(rows.find((row) => row.id === fixtureIds.otherGround)?.latitude, null);
+    assert.ok(rows.every((row) => row.id !== fixtureIds.unvisitedGround));
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal((await listVisitedStadiums(tx)).find((row) => row.id === fixtureIds.ground)?.isSpecial, false);
+  });
+});
+
+
+test("map crest represents a unanimous known attended opponent, never a stadium club", async () => {
+  await rolledBack(async (tx) => {
+    // Different opponents require a neutral badge even when both have crests.
+    await tx.update(clubs).set({ crestObjectKey: `crests/${fixtureIds.north}/11111111-1111-4111-8111-111111111111.webp` }).where(eq(clubs.id, fixtureIds.north));
+    await tx.update(clubs).set({ crestObjectKey: `crests/${fixtureIds.south}/11111111-1111-4111-8111-111111111111.webp` }).where(eq(clubs.id, fixtureIds.south));
+    const ground = async () => (await listVisitedStadiums(tx)).find((row) => row.id === fixtureIds.ground)!;
+    assert.equal((await ground()).markerCrestKey, null);
+    assert.equal((await ground()).markerClubName, null);
+    // Elche is home in one visit, away in the other: derive the rival in both.
+    await tx.update(matches).set({ awayClubId: fixtureIds.north }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestKey, `crests/${fixtureIds.north}/11111111-1111-4111-8111-111111111111.webp`);
+    assert.equal((await ground()).markerClubName, "Club Norte (ejemplo)");
+    assert.equal((await ground()).visits, 2);
+    // A single unknown rival invalidates consensus even with one known rival.
+    await tx.update(matches).set({ awayClubId: null }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestKey, null);
+    await tx.update(matches).set({ homeClubId: null, awayClubId: null, homeScore: null, awayScore: null }).where(eq(matches.id, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestKey, null);
+    // Removing that attendance restores consensus; the fixture is still there.
+    await tx.delete(attendance).where(eq(attendance.matchId, fixtureIds.homeMatch));
+    assert.equal((await ground()).markerCrestKey, `crests/${fixtureIds.north}/11111111-1111-4111-8111-111111111111.webp`);
+    await tx.update(clubs).set({ crestObjectKey: null }).where(eq(clubs.id, fixtureIds.north));
+    assert.equal((await ground()).markerCrestKey, null);
+    assert.equal((await ground()).visits, 1);
+  });
+});

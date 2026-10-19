@@ -14,6 +14,7 @@ export async function mutateFixture(_previous: ReferenceState, form: FormData): 
     values = readFixtureInput(form);
     await getDatabase().transaction((tx) => writeFixture(tx, values!));
     revalidatePath("/admin");
+    revalidatePath("/map");
     revalidatePath("/trips", "layout");
     revalidatePath("/stadiums", "layout");
     const messages: Record<string, string> = { save: "Partido guardado. Datos locales bloqueados.", attend: "Asistencia guardada y publicada.", unattend: "Asistencia eliminada. El partido se conserva.", delete: "Partido eliminado." };

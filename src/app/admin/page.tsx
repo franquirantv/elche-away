@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { getAdminReferences } from "@/server/admin";
 import { AccessDenied } from "@/server/admin-policy";
 import { referenceKinds, type ReferenceKind } from "@/server/reference-input";
+import { ClubCrestForm } from "@/components/club-crest-form";
 import { ReferenceForm } from "@/components/reference-form";
 import { FixtureBrowser } from "@/components/fixture-browser";
 import { ELCHE_CLUB_ID } from "@/lib/identity";
@@ -29,10 +30,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <nav className="admin-tabs" aria-label="Administración"><Link href="/admin" aria-current={!section || section === "fixtures" ? "page" : undefined}>Partidos</Link>{referenceKinds.map((item) => <Link key={item} href={`/admin?section=${item}`} aria-current={section === item ? "page" : undefined}>{labels[item]}</Link>)}</nav>
     {!section || section === "fixtures" ? <FixtureBrowser references={references} filters={params} /> : <>
     <h2 className="group-title">{labels[kind]}</h2>
+    {kind === "clubs" && <ClubCrestForm />}
     {kind === "seasons" && <p className="admin-hint">La división pertenece a la temporada del Elche, no a cada partido ni a su competición.</p>}
     <section className="admin-card"><h3>Crear referencia</h3><ReferenceForm kind={kind} tierOptions={references.tiers} key={kind} /></section>
     <section aria-label="Referencias existentes" className="admin-records">
-      {references[kind].map((record) => <details key={`${record.id}:${record.updatedAt.toISOString()}`} className="admin-card"><summary>{"name" in record ? record.name : record.label}</summary><ReferenceForm kind={kind} record={record} tierOptions={references.tiers} protectedClub={kind === "clubs" && record.id === ELCHE_CLUB_ID} /></details>)}
+      {references[kind].map((record) => <details key={`${record.id}:${record.updatedAt.toISOString()}`} className="admin-card"><summary>{"name" in record ? record.name : record.label}</summary><ReferenceForm kind={kind} record={record} tierOptions={references.tiers} protectedClub={kind === "clubs" && record.id === ELCHE_CLUB_ID} />{kind === "clubs" && "crestObjectKey" in record && <ClubCrestForm clubId={record.id} objectKey={record.crestObjectKey} />}</details>)}
       {!references[kind].length && <p>No hay referencias de este tipo todavía.</p>}
     </section></>}
   </div>;

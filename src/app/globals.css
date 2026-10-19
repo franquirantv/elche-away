@@ -124,3 +124,50 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .admin-card { min-width: 0; overflow-wrap: anywhere; }
 .admin-card > p { line-height: 1.8; margin-block: 8px; }
 .admin-field textarea { resize: vertical; }
+
+.map-coverage { margin-block: 24px 12px; }
+.map-section { margin-block: 24px 40px; }
+.map-section > p { line-height: 1.7; }
+.stadium-map { height: 100%; width: 100%; isolation: isolate; }
+.map-attribution { position: absolute; z-index: 2; top: 8px; right: 8px; max-width: calc(100% - 80px); background: white; padding: 4px 8px; font-size: 11px; overflow-wrap: anywhere; }
+.map-attribution a { text-decoration: underline; }
+/* Leaflet owns the marker transform; animate only the inner badge. */
+.stadium-marker { background: transparent; }
+.stadium-badge { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: 2px; border: 3px solid #155d43; border-radius: 50%; background: white; color: #155d43; box-shadow: 0 2px 7px #19362c50; transition: scale .16s ease; }
+.stadium-badge::after { content: ""; position: absolute; bottom: -10px; left: 13px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid #155d43; }
+.stadium-badge-image { width: 30px; height: 30px; object-fit: contain; }
+.stadium-badge-neutral { font: 700 20px/1 Arial, Helvetica, sans-serif; letter-spacing: -1px; }
+.stadium-marker.is-selected .stadium-badge { scale: 1.12; border-color: #70421c; box-shadow: 0 0 0 4px #e5c097, 0 3px 9px #19362c60; }
+.stadium-marker.is-selected .stadium-badge::after { border-top-color: #70421c; }
+@media (prefers-reduced-motion: reduce) { .stadium-badge { transition: none; } }
+.stadium-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
+.stadium-map .leaflet-popup-content { max-width: calc(100vw - 130px); overflow-wrap: anywhere; }
+.stadium-map .leaflet-popup-content a { text-decoration: underline; font-weight: 700; }
+#stadium-list { scroll-margin-top: 24px; }
+
+.map-page { padding-top: 20px; }
+.map-page .map-section { margin-top: 12px; }
+.map-page .page-heading h1 { font-size: clamp(36px, 5vw, 56px); margin-bottom: 8px; }
+.map-page .page-heading .eyebrow { margin-bottom: 8px; }
+.map-page .map-coverage { margin-block: 12px 6px; font-size: 14px; }
+.map-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 10px; font-size: 13px; }
+.map-toggle { min-height: 44px; padding: 8px 12px; border: 1px solid #9aaa9e; border-radius: 4px; flex-shrink: 0; }
+.map-stage { position: relative; height: clamp(500px, 70svh, 900px); border: 1px solid #9aaa9e; background: #e6ebe6; isolation: isolate; }
+.map-carousel { position: absolute; z-index: 1; bottom: 12px; left: 0; right: 0; display: flex; gap: 12px; overflow-x: auto; padding: 8px 16px 12px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; touch-action: pan-x pan-y; list-style: none; }
+.map-card { max-height: 195px; overflow-y: auto; flex: 0 0 270px; border: 2px solid white; border-radius: 8px; background: white; box-shadow: 0 2px 12px #19362c30; scroll-snap-align: center; overflow-wrap: anywhere; }
+.map-card[data-selected="true"] { border-color: #155d43; background: #f0f7ef; }
+.map-card-select { display: grid; gap: 4px; width: 100%; padding: 12px 14px 4px; text-align: left; font-size: 12px; line-height: 1.4; cursor: pointer; }
+.map-card-select:disabled { opacity: 1; cursor: default; }
+.map-card-name { font-size: 16px; font-weight: 700; }
+.map-card-history { display: block; min-height: 44px; padding: 10px 14px; text-decoration: underline; font-size: 13px; }
+.map-card :focus-visible { outline-offset: -4px; border-radius: 6px; }
+@media (max-width: 767px) {
+  .map-toolbar { font-size: 12px; gap: 12px; }
+  .map-toggle { max-width: 130px; flex-shrink: 0; }
+  .map-stage { height: max(500px, 65svh); }
+  .map-card { flex-basis: 245px; }
+}
+@media (prefers-reduced-motion: reduce) { .map-carousel { scroll-behavior: auto; } }
+
+.club-crest-preview { object-fit: contain; background: white; border: 1px solid #dce3dc; border-radius: 4px; }
+.crest-form { padding-top: 20px; border-top: 1px solid #dce3dc; }

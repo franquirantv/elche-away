@@ -4,9 +4,9 @@
 
 ## Stack instalado
 
-Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
+Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
-PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; todavía no hay fotos ni mapa interactivo. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
 ## Requisitos
 
@@ -228,7 +228,9 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 | `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
 | `/stadiums/[slug]` | Información y viajes asociados al estadio visitado. |
-| `/map` | Estado de próxima disponibilidad, sin mapa interactivo. |
+| `/map` | Mapa Leaflet de estadios visitados, cobertura de coordenadas y lista alternativa. |
+| `/media/crests/[clubId]/[file]` | WebP público con caché de un escudo actualmente vinculado al club. |
+| `/api/admin/club-crest` | POST de subida, eliminación o limpieza; autorización independiente del propietario. |
 | `/auth/sign-in` | Acceso con Google. |
 | `/auth/account` | Sesión propia, identificador para configurar la allowlist y cierre de sesión. |
 | `/admin` | Partidos locales, filtros por temporada/competición, asistencia y referencias; requiere identidad configurada. |
@@ -293,7 +295,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 sigue pendiente.
+Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** **Milestone 5 completado y aceptado el 2026-10-19, con integración autorizada en main y tag `milestone-5`.** Incluye mapa interactivo y escudos gestionados mediante Neon Object Storage. Milestone 6 sigue pendiente.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
 
@@ -304,3 +306,75 @@ En desarrollo o testing (nunca producción), abre `/` en móvil y escritorio y c
 Desde `/admin`, marca y desmarca una asistencia y recarga el inicio: los totales deben reflejarla sin borrar el partido. Dos visitas al mismo estadio cuentan como dos viajes y un estadio. Un viaje sin estadio cuenta solo en viajes. Comprueba un resultado finalizado como local y como visitante; un 0–0 finalizado es empate. Cambia el estado a programado, aplazado, cancelado, abandonado o desconocido: el marcador deja de contribuir. Un finalizado sin marcador tampoco aporta resultado. Las tandas no cambian el empate de los goles jugados. Sin asistencias deben mostrarse ceros y el mensaje de archivo vacío. Restaura los datos de prueba al terminar.
 
 Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correctos; dos ejecuciones consecutivas de `npm test` con 53/53 pruebas, sin omisiones y con limpieza de sus bases temporales; build de producción correcto mediante `npm run build -- --webpack`. Las huellas de las nueve tablas existentes de testing permanecieron idénticas. El comportamiento funcional aceptado no se modificó.
+
+## Mapa (Milestone 5)
+
+Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. Un carrusel superpuesto conecta tarjetas y pines.
+
+Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
+
+| Variable | Valor predeterminado |
+| --- | --- |
+| `MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+| `MAP_TILE_ATTRIBUTION_TEXT` | `OpenStreetMap contributors` |
+| `MAP_TILE_ATTRIBUTION_URL` | `https://www.openstreetmap.org/copyright` |
+| `MAP_TILE_MAX_ZOOM` | `19` (entero entre 1 y 19) |
+
+La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución debe enlazar a HTTPS. Configuración inválida desactiva el mapa y conserva la lista. Para cambiar proveedor, revisar condiciones/coste y configurar URL, atribución y zoom sin cambiar el componente. Reiniciar el servidor local tras editar `.env.local`.
+
+### Aceptación manual en escritorio y móvil
+
+1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/map` en escritorio y móvil (o viewport de 390 px).
+2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar `/map`. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas».
+3. Al entrar debe verse el mapa grande encuadrando toda la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o eligiendo su tarjeta.
+4. En escritorio, pulsar una tarjeta: debe acercarse suavemente a su estadio, abrir información y marcar su tarjeta. Pulsar otro pin: debe seleccionar y llevar su tarjeta a la vista sin desplazar la página. Comprobar nombre, localidad, visitas y enlace «Ver historial del estadio». Probar Tab, Enter, zoom y foco visible. En móvil (390 px y dispositivo real), recorrer horizontalmente las tarjetas sin arrastrar el mapa, pulsar tarjeta y pin, ampliar con dos dedos, girar orientación y usar «Pausar interacción» para desplazar la página. La rueda de escritorio desplaza la página. No debe haber desbordamiento horizontal de la página; la atribución no queda cubierta. Con movimiento reducido, los cambios de selección no deben animarse.
+5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar `/map`: debe aparecer el aviso de fallo y los enlaces de tarjetas y lista deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, comprobar HTTPS y Referer en los tiles; sin JavaScript no se solicitan tiles. La atribución permanece visible en la esquina superior derecha del mapa a cualquier zoom, fuera del carrusel.
+7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío.
+
+La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
+
+Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lint`, `npm run typecheck` y `npm test` correctos (55/55, sin omisiones; base temporal eliminada). `npm run build` con Turbopack falló por permisos al abrir un puerto local durante el procesamiento CSS; `npm run build -- --webpack` pasó. Aceptación manual pendiente.
+
+Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La experiencia del mapa fue aceptada funcionalmente por el propietario antes del refinamiento final de escudos.
+
+### Escudos desde el admin (ampliación aprobada de 5)
+
+Desde `/admin?section=clubs`, crea primero el club o abre uno existente. «Subir escudo»/«Reemplazar escudo» admite PNG, JPEG y WebP de hasta **1 MB (1.000.000 bytes)**. Se valida el contenido real, se rechazan SVG/animaciones y se guarda una copia WebP sin metadatos, de hasta 512×512, con transparencia y proporciones conservadas. «Eliminar escudo» exige confirmación y conserva el club. Ya no se gestionan archivos en `public/crests/`.
+
+El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo aparece si todas las visitas tienen el mismo rival conocido y su archivo carga. Varios rivales, alguno desconocido, falta de imagen o fallo de Storage producen el badge neutro «ea.». La selección mantiene borde cálido/halo y sincronización pin–tarjeta. No se incluyen escudos reales en el repositorio.
+
+Neon Object Storage fue aprobado y confirmado disponible en el plan Free, región Frankfurt. Cuotas actuales: 5 GB de objetos por proyecto y 5 GB mensuales de transferencia pública compartida con el resto de servicios. Mantener Free y vigilar consumo para conservar 0 €; no contratar upgrades. [Límites oficiales](https://neon.com/docs/introduction/plans). Las pruebas reales de conectividad solo crean y eliminan sus propios objetos sintéticos en los buckets no productivos.
+
+Configuración (todos los secretos solo en servidor, nunca `NEXT_PUBLIC_*`):
+
+| Variable | Development | Testing |
+| --- | --- | --- |
+| Credencial S3 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `TEST_AWS_ACCESS_KEY_ID`, `TEST_AWS_SECRET_ACCESS_KEY` |
+| Endpoint de rama | `AWS_ENDPOINT_URL_S3` | `TEST_AWS_ENDPOINT_URL_S3` |
+| Región | `AWS_REGION` | `TEST_AWS_REGION` |
+| Bucket `public_read` | `STORAGE_BUCKET` | `TEST_STORAGE_BUCKET` |
+| Host PostgreSQL sin `-pooler` | `STORAGE_DATABASE_HOST` | `TEST_STORAGE_DATABASE_HOST` |
+
+El endpoint y la credencial deben ser distintos entre development/testing, y cada host debe coincidir con su conexión PostgreSQL. Los bindings locales se han preparado a partir de las conexiones existentes. `npm run dev:testing` selecciona automáticamente `STORAGE_ENVIRONMENT=testing`. En Vercel preview se exige testing; producción requiere configuración explícita `STORAGE_ENVIRONMENT=production` y credenciales/host propios. No se ha creado ni configurado producción. Al crear ramas, recordar que sus archivos se heredan; no copiar originales privados a previews. Usar credenciales de cada rama, no de un ancestro de producción.
+
+Comandos:
+
+- `npm run storage:check`: comprueba ambos buckets; sube una imagen geométrica temporal por entorno, comprueba lectura anónima y elimina exclusivamente sus objetos. No imprime secretos.
+- `npm run db:migrate` / `npm run db:migrate:test`: aplicar explícitamente la migración aditiva `0003_yielding_exodus.sql` antes de usar esta versión; nunca seed/reset para actualizar. Añade `clubs.crest_object_key` y la cola `storage_cleanup`, conservando datos y `crest_path` legado.
+- `npm test`: sigue usando datos PostgreSQL desechables. También comprueba actualización desde el esquema anterior en una segunda base temporal propia; las pruebas HTTP de Storage usan un simulador S3 en memoria, sin buckets reales ni secretos externos. CI no necesita credenciales de Storage.
+
+Ante respuestas perdidas o errores, recargar antes de reintentar. La comparación de la versión anterior evita sobrescribir cambios ajenos. Los archivos sustituidos/eliminados se limpian tras confirmar PostgreSQL; los fallos quedan pendientes. «Limpiar escudos pendientes», en Clubes, reintenta hasta diez objetos por petición sin borrar escudos en uso. Las subidas interrumpidas mantienen una reserva de una hora antes de poder limpiarse. No hay tareas automáticas. La ruta pública de la aplicación se cachea hasta un día; las URLs directas del bucket pueden conservar copias en caché hasta un año. Retirar un archivo no revoca copias públicas ya cacheadas.
+
+Aceptación manual en escritorio y móvil:
+
+1. Reiniciar el servidor tras actualizar configuración/migración. Entrar como propietario en `/admin?section=clubs` y subir una imagen apropiada. Comprobar preview y persistencia tras recargar.
+2. Reemplazarla: debe cambiar la imagen y su clave; renombrar el club después no debe borrar el escudo. Eliminar con confirmación: el club permanece y el mapa recupera «ea.».
+3. Probar archivo mayor de 1 MB, SVG y un archivo que no sea una imagen renombrado a PNG: deben rechazarse. Sin sesión o con usuario ajeno no se puede subir, reemplazar, eliminar ni limpiar.
+4. En `/map`, comprobar el escudo solo para un estadio cuyas visitas compartan rival conocido. Varios rivales o alguna visita desconocida mantienen el neutro. Bloquear la URL `/media/crests/*` en red: el badge neutro conserva la interacción.
+5. En escritorio y móvil (390/320 px y dispositivo real), comprobar imagen completa y sin deformación, tamaño consistente para proporciones distintas, borde/halo seleccionado, Tab/Enter, pin → tarjeta y tarjeta → popup, zoom, atribución OSM y navegación sin JavaScript.
+6. Usar `npm run dev:testing` y comprobar que sus cambios no afectan a development. Para simular fallos de Storage se dispone de las pruebas automáticas de recuperación; no cambiar credenciales de producción ni borrar objetos ajenos para probar.
+
+La integración S3 y la separación de entornos pueden reutilizarse para fotos en un milestone posterior; no se han implementado fotos, galerías ni subida de originales.
+
+Verificación de la ampliación Storage (2026-10-19): lint y typecheck correctos; `npm test` con 62/62 pruebas, sin fallos ni omisiones, incluidas actualización desde 0002, autorización HTTP, conversión, reemplazo concurrente y recuperación ante fallos. Bases temporales propias eliminadas. Build con Webpack correcto; Turbopack mantiene el bloqueo de permisos del entorno. Buckets reales de development/testing verificados con objetos sintéticos propios eliminados. Migraciones aplicadas en ambos entornos sin seed/reset y con huellas de datos existentes idénticas. `npm ci --dry-run --ignore-scripts` correcto. El propietario confirmó el funcionamiento del escudo y autorizó la integración el 2026-10-19; no se ha configurado producción.

@@ -14,7 +14,7 @@ Use a readable system font initially, simple spacing, and a small set of reusabl
 
 ## Mobile and accessibility
 
-Design single-column trips first, generous touch targets, visible focus and sufficient contrast. Never communicate result or special status through color alone. Map gets its own usable viewport and a linked list fallback; it must not trap scrolling or require precision tapping. Show missing-coordinate coverage. Include islands/autonomous cities when data warrants; avoid forcing all points into an unreadable mainland view.
+Design single-column trips first, generous touch targets, visible focus and sufficient contrast. Never communicate result or special status through color alone. Map is the main surface on `/map`, displayed immediately with fixed peninsular Spain bounds. Overlay horizontal stadium cards at the bottom, synchronize pin/card selection, and keep attribution outside the overlay. Cards include a separate history link; unlocated stadiums remain readable and linked. Preserve a server-rendered list fallback. Allow pausing map gestures for page scrolling; horizontal card gestures must not drag the map. Respect reduced motion and keyboard navigation. Show missing-coordinate coverage. Include islands/autonomous cities when data warrants; avoid forcing all points into an unreadable mainland view.
 
 Unknown dates/results are explicit labels, not blank broken cards. Keep chronology semantics consistent with PRODUCT. Loading, empty, failed-query and unavailable-map states explain what happened without exposing internals.
 

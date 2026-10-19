@@ -10,7 +10,8 @@ import { createDatabase } from "../src/db/connection";
 import { readHomeSummary, findTrip, listTrips } from "../src/db/queries";
 import { fixtureIds } from "../src/db/fixtures";
 import { eq } from "drizzle-orm";
-import { matches, clubs } from "../src/db/schema";
+import { matches, clubs, stadiums } from "../src/db/schema";
+import { storageFixture } from "./storage-fixture";
 import { authFixture } from "./auth-fixture";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -20,9 +21,11 @@ let server: ReturnType<typeof spawn>;
 let origin: string;
 let output = "";
 let identity: Awaited<ReturnType<typeof authFixture>>;
+let storage: Awaited<ReturnType<typeof storageFixture>>;
 
 before(async () => {
   identity = await authFixture();
+  storage = await storageFixture();
   // Ask the OS for a free port so the suite does not depend on port 3000.
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
@@ -34,7 +37,7 @@ before(async () => {
   origin = `http://127.0.0.1:${port}`;
   server = spawn(process.execPath, [
     "node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1", "--port", String(port),
-  ], { env: { ...process.env, DATABASE_URL: localDatabaseUrl("testing"), ARCHIVE_TEST_SERVER: "1", NEON_AUTH_BASE_URL: identity.baseUrl, NEON_AUTH_COOKIE_SECRET: "synthetic-cookie-secret-only-for-local-tests-123456", ADMIN_USER_ID: identity.ownerId, NEXT_TELEMETRY_DISABLED: "1" }, stdio: ["ignore", "pipe", "pipe"] });
+  ], { env: { ...process.env, DATABASE_URL: localDatabaseUrl("testing"), ARCHIVE_TEST_SERVER: "1", STORAGE_ENVIRONMENT: "testing", TEST_AWS_ENDPOINT_URL_S3: storage.endpoint, TEST_AWS_REGION: "us-east-1", TEST_STORAGE_BUCKET: "elche-away-test", TEST_AWS_ACCESS_KEY_ID: "synthetic-storage-id", TEST_AWS_SECRET_ACCESS_KEY: "synthetic-storage-secret", TEST_STORAGE_DATABASE_HOST: new URL(localDatabaseUrl("testing")).hostname.replace("-pooler", ""), NEON_AUTH_BASE_URL: identity.baseUrl, NEON_AUTH_COOKIE_SECRET: "synthetic-cookie-secret-only-for-local-tests-123456", ADMIN_USER_ID: identity.ownerId, NEXT_TELEMETRY_DISABLED: "1" }, stdio: ["ignore", "pipe", "pipe"] });
   server.stdout!.on("data", (chunk) => { output = (output + chunk).slice(-12000); });
   server.stderr!.on("data", (chunk) => { output = (output + chunk).slice(-12000); });
   const deadline = Date.now() + 90000;
@@ -50,11 +53,11 @@ before(async () => {
 }, { timeout: 100000 });
 
 after(async () => {
-  if (!server || server.exitCode !== null) { await identity?.close(); return; }
+  if (!server || server.exitCode !== null) { await identity?.close(); await storage?.close(); return; }
   const exited = once(server, "exit");
   server.kill("SIGTERM");
   const forceKill = setTimeout(() => server.kill("SIGKILL"), 5000);
-  try { await exited; } finally { clearTimeout(forceKill); await identity?.close(); }
+  try { await exited; } finally { clearTimeout(forceKill); await identity?.close(); await storage?.close(); }
 });
 
 const pages = [
@@ -468,4 +471,88 @@ test("home renders attendance totals and explicit result and venue coverage", as
     assert.ok(html.includes(`Estadio conocido: ${summary.knownVenues} de ${summary.trips} viajes`));
     assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
   } finally { await pool.end(); }
+});
+
+
+test("map serves usable stadium links and coordinate coverage without tiles or JavaScript", async () => {
+  const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+  assert.match(html, /Estadios con coordenadas: 0 de 2/);
+  assert.match(html, /Sin coordenadas: 2/);
+  assert.match(html, /href="\/stadiums\/estadio-del-corcho-ejemplo"/);
+  assert.match(html, /href="\/stadiums\/campo-del-recuerdo-ejemplo"/);
+  assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+  assert.match(html, /Todavía no hay coordenadas/);
+  assert.match(html, /class="stadium-map"/);
+  assert.match(html, /aria-label="Seleccionar estadio visitado"/);
+  assert.match(html, /Ver historial del estadio/);
+  assert.doesNotMatch(html, /Activar mapa/);
+});
+
+test("map serves the carousel with locations and keeps unlocated visited stadiums", async () => {
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const [before] = await db.select().from(stadiums).where(eq(stadiums.id, fixtureIds.ground));
+  try {
+    await db.update(stadiums).set({ latitude: 38.2, longitude: -0.7 }).where(eq(stadiums.id, fixtureIds.ground));
+    const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+    assert.match(html, /Estadios con coordenadas: 1 de 2/);
+    assert.match(html, /Sin coordenadas: 1/);
+    assert.match(html, /Ciudad de ejemplo/);
+    assert.equal((html.match(/class="map-card"/g) ?? []).length, 2);
+    assert.equal((html.match(/class="map-card-history"/g) ?? []).length, 2);
+    assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+  } finally {
+    await db.update(stadiums).set({ latitude: before.latitude, longitude: before.longitude }).where(eq(stadiums.id, before.id));
+    await pool.end();
+  }
+});
+
+
+test("crest HTTP operations authorize every request, normalize images and recover cleanup", async () => {
+  const sharp = (await import("sharp")).default;
+  const { storageCleanup } = await import("../src/db/schema");
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  const id = randomUUID();
+  const png = await sharp({ create: { width: 64, height: 32, channels: 4, background: "#155d43" } }).png().withExif({ IFD0: { Artist: "Synthetic EXIF" } }).toBuffer();
+  async function submit(intent: string, cookie: string, expected = "", bytes: Buffer = png, type = "image/png", originHeader = origin) {
+    const form = new FormData(); form.set("intent", intent); form.set("clubId", id); form.set("expectedKey", expected); form.set("confirmRemove", "yes");
+    if (intent === "upload") form.set("file", new File([new Uint8Array(bytes)], "synthetic.png", { type }));
+    return fetch(`${origin}/api/admin/club-crest`, { method: "POST", headers: { Origin: originHeader, Cookie: cookie }, body: form });
+  }
+  await db.insert(clubs).values({ id, name: "Club de escudo HTTP sintético", slug: `crest-http-${id}` });
+  try {
+    const before = storage.writes();
+    for (const cookie of ["", identity.otherCookie]) for (const intent of ["upload", "remove", "cleanup"]) assert.equal((await submit(intent, cookie)).status, 403);
+    assert.equal((await submit("upload", identity.ownerCookie, "", png, "image/png", "https://other.invalid")).status, 403);
+    assert.equal(storage.writes(), before);
+    const invalid = await submit("upload", identity.ownerCookie, "", Buffer.from("<svg/>"), "image/svg+xml");
+    assert.equal(invalid.status, 400, await invalid.text());
+    assert.equal((await submit("upload", identity.ownerCookie, "", Buffer.alloc(1_000_001))).status, 400);
+    assert.equal(storage.writes(), before);
+    assert.equal((await submit("upload", identity.ownerCookie)).status, 200);
+    const [first] = await db.select().from(clubs).where(eq(clubs.id, id));
+    assert.ok(first.crestObjectKey);
+    const publicUrl = `${origin}/media/${first.crestObjectKey}`;
+    const image = await fetch(publicUrl);
+    assert.equal(image.status, 200);
+    assert.match(image.headers.get("cache-control") || "", /immutable/);
+    const info = await sharp(Buffer.from(await image.arrayBuffer())).metadata();
+    assert.equal(info.format, "webp"); assert.equal(info.exif, undefined);
+    const admin = await (await fetch(`${origin}/admin?section=clubs`, { headers: { Cookie: identity.ownerCookie } })).text();
+    assert.match(admin, /Subir escudo|Reemplazar escudo/);
+    assert.doesNotMatch(admin, /synthetic-storage-secret/);
+    assert.equal((await submit("upload", identity.ownerCookie)).status, 409);
+    assert.equal((await submit("upload", identity.ownerCookie, first.crestObjectKey)).status, 200);
+    const [second] = await db.select().from(clubs).where(eq(clubs.id, id));
+    assert.notEqual(second.crestObjectKey, first.crestObjectKey);
+    assert.equal(storage.objects.has(first.crestObjectKey), false);
+    assert.equal((await fetch(publicUrl)).status, 404);
+    assert.equal((await submit("remove", identity.ownerCookie, first.crestObjectKey)).status, 409);
+    assert.equal((await submit("remove", identity.ownerCookie, second.crestObjectKey!)).status, 200);
+    assert.equal(storage.objects.has(second.crestObjectKey!), false);
+    assert.equal((await db.select().from(clubs).where(eq(clubs.id, id)))[0].crestObjectKey, null);
+  } finally {
+    for (const key of storage.objects.keys()) if (key.startsWith(`crests/${id}/`)) storage.objects.delete(key);
+    await db.delete(storageCleanup).where(eq(storageCleanup.objectKey, (await db.select().from(clubs).where(eq(clubs.id, id)))[0]?.crestObjectKey || ""));
+    await db.delete(clubs).where(eq(clubs.id, id)); await pool.end();
+  }
 });
