@@ -1,12 +1,12 @@
 # Database
 
-Milestone 2 implements the seven core tables in `src/db/schema.ts` with a reviewed initial migration under `drizzle/`. Milestone 4c adds import mappings; photos remain planned. PostgreSQL with Drizzle. Domain tables use UUID primary keys and created/updated timestamps (`timestamptz`); application writes maintain updated time. Avoid database extensions unless required.
+Milestone 2 implements the seven core tables in `src/db/schema.ts` with a reviewed initial migration under `drizzle/`. Milestone 4c adds import mappings; Milestone 5 adds club crest object keys and recoverable Storage cleanup; photos remain planned. PostgreSQL with Drizzle. Domain tables use UUID primary keys and created/updated timestamps (`timestamptz`); application writes maintain updated time. Avoid database extensions unless required.
 
 ## Entities and domain decision
 
 | Table | Important fields | Rules |
 | --- | --- | --- |
-| clubs | id, name, slug (required), crest_path? | Stable organization identity, no stadium FK. Names need not be unique. |
+| clubs | id, name, slug (required), crest_object_key?, legacy crest_path? | Stable organization identity, no stadium FK. Names need not be unique. |
 | stadiums | id, slug, name (required), city?, province_code?, latitude?, longitude? | Physical venue, no owning-club FK. |
 | competitions | id, name (required) | Tournament, not Elche's tier. No edition/membership tables. |
 | tiers | id, name (required), level (required positive integer) | Historical division label and pyramid level; level is not unique across historical names. |
@@ -36,7 +36,11 @@ Clubs, stadiums and attendance records have required, unique, lowercase ASCII sl
 
 Generate once on creation: club/stadium name; attendance slug from match date plus fixture names when known, otherwise a useful partial label or `viaje`. Transliterate accents and append `-2`, `-3`, etc. on collision, truncating the base to keep the limit. Never depend on names or dates being unique. Freeze the slug after creation in MVP, including when a name, date or opponent is corrected. Names remain editable. There is no slug-history table or redirect service. An exceptional later slug change must be deliberate and accepts old links returning 404 unless a concrete need justifies a one-off redirect.
 
-`clubs.crest_path` is nullable: an optional reference to a trusted repository-managed asset under `/crests/`, not a user-supplied remote URL, upload capability or selected storage provider. Missing assets use a text/initials fallback. Add only supplied, appropriate assets; the core design must work without any crest. No asset table, crest upload workflow or binary data. A future media decision may replace the reference without changing club identity.
+`clubs.crest_object_key` is nullable and unique, constrained to `crests/<this-club-uuid>/<random-uuid>.webp`. Store only object identity; derive the public media path at read time. Only the separately authorized crest upload/removal flow writes it. Ordinary reference/import edits preserve it and cannot submit an arbitrary URL or key. Legacy `crest_path` remains unchanged for additive upgrade/rollback, but is no longer editable or used by the map. No club–stadium association is introduced; only unanimous known attended opponents select the crest.
+
+Milestone 5 migration `0003_yielding_exodus.sql` adds that column/constraints and `storage_cleanup(object_key PK, not_before timestamptz)` with a due index. The ledger holds reserved uploads and cleanup intentions, never image bytes. No existing rows, slugs, attendance or auth tables change; no automatic backfill or deletion. An interrupted PUT is recoverable after one hour; retired keys are eligible immediately. Explicit cleanup locks each due intent, checks that no club references its key, deletes the object then its ledger row. Active-key intents are removed without deleting the image. Storage errors roll back the intent deletion for retry. See ARCHITECTURE for serialization and failure outcomes.
+
+Apply the reviewed migration explicitly before starting this application version. Tests cover both empty installation and upgrade from migration 0002 with an existing legacy club. A rollback to older code can leave the additive column/table in place; it does not render new Storage crests. Do not drop the ledger to roll back: it carries recovery work.
 
 ## Nulls and constraints
 

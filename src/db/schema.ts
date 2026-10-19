@@ -12,9 +12,12 @@ export const clubs = pgTable("clubs", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   slug: varchar("slug", { length: 160 }).notNull().unique(),
-  crestPath: text("crest_path"),
+  crestPath: text("crest_path"), // Legacy local reference, retained for safe rollback.
+  crestObjectKey: text("crest_object_key"),
   ...timestamps(),
 }, (t) => [
+  unique("clubs_crest_object_key_unique").on(t.crestObjectKey),
+  check("clubs_crest_object_key", sql`${t.crestObjectKey} is null or ${t.crestObjectKey} ~ ('^crests/' || ${t.id}::text || '/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}[.]webp$')`),
   check("clubs_name_nonblank", sql`length(trim(${t.name})) > 0`),
   check("clubs_slug_format", sql`${t.slug} ~ ${sql.raw(`'${slugPattern}'`)}`),
   check("clubs_crest_local", sql`${t.crestPath} is null or ${t.crestPath} ~ '^/crests/[a-zA-Z0-9_-]+[.](png|webp|jpg|jpeg|svg)$'`),
@@ -123,4 +126,13 @@ export const importBatches = pgTable("import_batches", {
   unique("import_batches_plan_index").on(t.planId, t.batchIndex),
   check("import_batches_index", sql`${t.batchIndex} >= 0`),
   check("import_batches_hashes", sql`${t.planHash} ~ '^[a-f0-9]{64}$' and ${t.afterSnapshot} ~ '^[a-f0-9]{64}$'`),
+]);
+
+// Durable cleanup intent, also reserved before a PUT to recover interrupted uploads.
+export const storageCleanup = pgTable("storage_cleanup", {
+  objectKey: text("object_key").primaryKey(),
+  notBefore: timestamp("not_before", { withTimezone: true }).notNull(),
+}, (t) => [
+  check("storage_cleanup_crest_key", sql`${t.objectKey} ~ '^crests/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}[.]webp$'`),
+  index("storage_cleanup_due_idx").on(t.notBefore),
 ]);
