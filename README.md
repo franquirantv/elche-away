@@ -295,7 +295,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 
 ## Estado del proyecto
 
-Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** El Milestone 5 está implementado en su rama; sigue pendiente de aceptación manual.
+Milestones 1–4d completados y aceptados por el propietario. **4c aceptado el 2026-10-18 e integrado en main con el tag `milestone-4c`.** OpenFootball es la fuente principal aprobada, con presupuesto de datos de 0 €, cobertura parcial y complemento manual mediante 4a. PostgreSQL sigue siendo la única fuente de verdad después de importar; no hay consultas runtime al proveedor ni sincronización continua. **4d completado: aceptación manual y verificaciones confirmadas por el propietario el 2026-10-18, integrado en main con el tag `milestone-4d`.** **Milestone 5 completado y aceptado el 2026-10-19, con integración autorizada en main y tag `milestone-5`.** Incluye mapa interactivo y escudos gestionados mediante Neon Object Storage. Milestone 6 sigue pendiente.
 
 Este README se actualiza cuando cambia la forma de instalar, configurar, ejecutar o desarrollar el proyecto.
 
@@ -336,7 +336,7 @@ La aceptación visual/táctil y el fallo real de tiles requieren estas comprobac
 
 Verificación de la rama 5 (2026-10-18): Node 22.23.3 / npm 10.9.9; `npm run lint`, `npm run typecheck` y `npm test` correctos (55/55, sin omisiones; base temporal eliminada). `npm run build` con Turbopack falló por permisos al abrir un puerto local durante el procesamiento CSS; `npm run build -- --webpack` pasó. Aceptación manual pendiente.
 
-Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La aceptación táctil en un dispositivo real y la cartografía visible siguen pendientes del propietario.
+Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmediato y carrusel sincronizado. Suite ampliada a 56/56 pruebas; comprobación adicional con Chrome headless en escritorio y a 390/320 px, bloqueando tiles de OSM, sin errores JavaScript ni desbordamiento horizontal. La selección tarjeta → pin y pin → tarjeta funciona sin desplazar la página. La experiencia del mapa fue aceptada funcionalmente por el propietario antes del refinamiento final de escudos.
 
 ### Escudos desde el admin (ampliación aprobada de 5)
 
@@ -377,4 +377,4 @@ Aceptación manual en escritorio y móvil:
 
 La integración S3 y la separación de entornos pueden reutilizarse para fotos en un milestone posterior; no se han implementado fotos, galerías ni subida de originales.
 
-Verificación de la ampliación Storage (2026-10-19): lint y typecheck correctos; `npm test` con 62/62 pruebas, sin fallos ni omisiones, incluidas actualización desde 0002, autorización HTTP, conversión, reemplazo concurrente y recuperación ante fallos. Bases temporales propias eliminadas. Build con Webpack correcto; Turbopack mantiene el bloqueo de permisos del entorno. Buckets reales de development/testing verificados con objetos sintéticos propios eliminados. Migraciones aplicadas en ambos entornos sin seed/reset y con huellas de datos existentes idénticas. `npm ci --dry-run --ignore-scripts` correcto. La aceptación manual de la subida de escudos sigue pendiente; no se ha configurado producción.
+Verificación de la ampliación Storage (2026-10-19): lint y typecheck correctos; `npm test` con 62/62 pruebas, sin fallos ni omisiones, incluidas actualización desde 0002, autorización HTTP, conversión, reemplazo concurrente y recuperación ante fallos. Bases temporales propias eliminadas. Build con Webpack correcto; Turbopack mantiene el bloqueo de permisos del entorno. Buckets reales de development/testing verificados con objetos sintéticos propios eliminados. Migraciones aplicadas en ambos entornos sin seed/reset y con huellas de datos existentes idénticas. `npm ci --dry-run --ignore-scripts` correcto. El propietario confirmó el funcionamiento del escudo y autorizó la integración el 2026-10-19; no se ha configurado producción.
