@@ -1,0 +1,18 @@
+{
+  "0000_spotty_midnight": {
+    "phase": "expand",
+    "compatibility": "Initial application schema; production must be empty or have the matching Drizzle history."
+  },
+  "0001_hesitant_longshot": {
+    "phase": "expand",
+    "compatibility": "Additive archive schema from the reviewed historical migration."
+  },
+  "0002_panoramic_darkhawk": {
+    "phase": "expand",
+    "compatibility": "Additive import schema from the reviewed historical migration."
+  },
+  "0003_yielding_exodus": {
+    "phase": "expand",
+    "compatibility": "Adds crest object references and cleanup queue while preserving legacy crest paths."
+  }
+}

@@ -90,6 +90,8 @@ All public trip, venue, map and personal-stat queries require attendance joined 
 
 ## Migration discipline
 
+Production CD is now versioned behind an explicit initial activation flag; see [CD](CD.md). It verifies a Neon recovery point and rehearses pending migrations on a disposable child before applying them with a direct connection, an advisory lock, bounded transactional DDL and full Drizzle hash-prefix validation. Every migration requires an expand/contract entry in `drizzle/release-policy.json`. There is no production seed/reset, schema push, managed Auth migration or automatic SQL rollback. Existing local database commands retain their nonproduction guards.
+
 Generate versioned Drizzle SQL and inspect it. Test constraints and upgrades on disposable PostgreSQL with synthetic records covering unknown values, repeat stadiums and both fixture designations, attendance isolation and season-tier/competition independence. Import milestone tests cover repeat syncs, remapped IDs, ambiguous candidates, local locks and provider failure. Use transactions for related writes where appropriate; verify selected Neon adapter supports the intended transaction API. Prefer additive compatible changes, backfill deliberately, then tighten constraints. Run production migrations as a deliberate release step, never in requests or every preview build. Back up before destructive operations and document recovery. Use the explicit scripts documented in README for generation, development/test migration and synthetic seeding. No request/build applies migrations. Drizzle metadata JSON stores schema snapshots only, never archive data.
 
 ## Implemented boundaries (Milestone 2)

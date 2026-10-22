@@ -275,7 +275,7 @@ La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de p
 4. Revisar el Vercel Preview del último commit y completar las comprobaciones manuales aplicables. Vercel y CI se ejecutan en paralelo; la revisión de Preview es posterior a CI en el proceso de aceptación. Su disponibilidad depende de la integración y configuración manual descritas abajo.
 5. Con autorización del propietario, integrar mediante el PR de GitHub cuando CI y Preview estén aceptados. Nunca integrar localmente ni hacer push directo a `main`. El merge vuelve a ejecutar CI sobre el commit integrado.
 
-Esta fase no añade release automático, migraciones productivas ni cambios en el despliegue Git existente de Vercel. Si Vercel ya despliega `main` automáticamente, un merge puede publicar producción: comprobarlo antes de integrar. Los scripts de migración locales siguen limitados a development/testing.
+El CD automático está versionado y permanece deshabilitado hasta configurar los destinos y `PRODUCTION_CD_ENABLED=true`. Tras CI correcta de main crea una recuperación Neon, ensaya/aplica migraciones, despliega el SHA verificado y ejecuta smoke de lectura. `vercel.json` impide el deploy Git de main; Preview sigue en Vercel. Los scripts de migración locales siguen limitados a development/testing. Configuración inicial, secretos, retención, cuotas y recuperación de incidencias: [CD automático](docs/CD.md).
 
 ### Configuración manual en GitHub
 
@@ -322,6 +322,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 - [DATABASE.md](docs/DATABASE.md): modelo, restricciones y migraciones.
 - [DESIGN.md](docs/DESIGN.md): dirección visual/UX.
 - [ROADMAP.md](docs/ROADMAP.md): milestones y límite del MVP.
+- [CD.md](docs/CD.md): CD productivo automático, activación inicial y gestión de fallos.
 
 ## Estado del proyecto
 

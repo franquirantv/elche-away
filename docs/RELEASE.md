@@ -1,5 +1,7 @@
 # Milestone 6: preparación y aceptación del MVP
 
+Actualización de CD: el propietario ha autorizado implementar el pipeline automático de recuperación, migraciones y publicación sin aprobación por release, una vez activado. [CD.md](CD.md) es la guía vigente para ese flujo y sustituye los pasos manuales de migración/publicación de este documento. El inventario inicial, configuración externa y aceptación siguen pendientes; esta implementación no ejecuta operaciones productivas. Se conserva aquí el procedimiento de bootstrap, smoke manual y recuperación de incidencias.
+
 Estado: preparación local; **no autoriza provisioning, push, despliegue, cambios de dominio, credenciales ni datos reales**. No marcar el MVP publicado hasta completar los controles externos y obtener aceptación del propietario. Alcance cerrado a milestones 1–6; sin fotos ni estadísticas nuevas.
 
 ## 1. Verificación reproducible sin producción
