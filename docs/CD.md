@@ -38,6 +38,8 @@ Nunca seed/reset/schema push, TRUNCATE, DROP DATABASE/SCHEMA ni migraciones del 
 
 `vercel.json` desactiva únicamente auto-deploy Git de `main`; Preview permanece en la integración Git. Actions es el único responsable de Production: usa la API REST versionada de Vercel con gitSource del SHA verificado. Es una petición explícita de deployment, independiente del disparador Git desactivado. El build remoto usa exclusivamente variables Production y `npm run release:check && npm run build`. No se reutiliza el build sintético de CI ni se ejecuta la migración en el build.
 
+El Build Command es común a Preview y Production. `release:check` omite el preflight completo únicamente si `VERCEL_ENV=preview`; Production mantiene íntegros sus controles y cualquier entorno ausente/desconocido falla. Preview puede compilar sin DATABASE_URL, Auth, Storage ni RELEASE_*: para utilizar servicios en runtime necesita sus valores no productivos por ámbito. No configurar VERCEL_ENV manualmente ni compartir variables Production con Preview. Los controles del workflow y del runner productivo no cambian.
+
 Se espera READY y se comprueba el SHA devuelto. El smoke comprueba HTTP/contenido español y rechaza la página de error, en `/`, `/trips`, `/stadiums`, `/map` y una ruta 404. Prueba la URL de deployment y la pública, cuyo alias debe resolver al mismo SHA; no sigue redirects ni envía credenciales a otros orígenes. El bypass opcional solo se envía al deployment Vercel, no al dominio público. Solo hay lecturas; no login, imports, escrituras ni descargas de tiles.
 
 | Fallo | Comportamiento |

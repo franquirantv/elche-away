@@ -34,6 +34,8 @@ Solicitar al propietario autorización y confirmar el inventario sin secretos an
 
 ## 3. Matriz de entorno y preflight
 
+El preflight completo del Build Command se ejecuta únicamente en Production. En `VERCEL_ENV=preview`, `release:check` lo omite para que el build no dependa de conexiones ni bindings productivos; los servicios runtime deben seguir siendo no productivos y aislados. La columna Preview siguiente describe esos servicios runtime y bindings opcionales de diagnóstico, no requisitos para compilar. Un entorno ausente/desconocido sigue fallando. No definir `VERCEL_ENV` manualmente para evitar comprobaciones.
+
 Configurar secretos por ámbito en Vercel; no copiar `.env.local` ni descargar secretos productivos al equipo. Nunca registrar valores ni incluirlos en incidencias/commits. Variables comunes:
 
 | Configuración | Preview | Production |
