@@ -29,6 +29,7 @@ Personal public archive of attended Elche CF away matches, with one owner's prot
 - Before new work, inspect Git status and branch. Create a dedicated branch from up-to-date `main`; confirm the correct branch before modifying code. Never switch branches if local changes could be lost; resolve that situation with the owner first.
 - Use descriptive names such as `feature/milestone-3-auth`, `feature/milestone-4-trip-management`, `feature/milestone-5-map`, or `fix/...` for independent fixes. Do not mix unrelated features in one branch.
 - Keep commits small and coherent, with descriptive English Conventional Commits-style messages. Update required README/documentation in the same branch.
+- Integrate changes only through a GitHub PR targeting `main`, after the latest CI `verify` check passes and the Vercel Preview is reviewed. Never locally merge/cherry-pick into `main` or push commits directly to `main`, including for fixes or documentation. An instruction to integrate means use the PR flow; if unavailable, report the manual steps rather than bypassing it.
 - Before declaring a branch finished, run the applicable checks below and review the complete diff, including new files. Report the branch, commits created, verification results, and readiness for integration into `main`.
 - Without the owner's explicit authorization, never merge into `main`, push, perform destructive rebases, force-push, or delete branches.
 

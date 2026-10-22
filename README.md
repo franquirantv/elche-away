@@ -265,7 +265,37 @@ Se verifican restricciones, nulos, sedes repetidas, separación asistencia/parti
 
 El SDK oficial está fijado a `@neondatabase/auth@0.6.0-beta`; incluye dependencias UI transitivas aunque esta aplicación no utiliza su kit visual. npm avisa de algunos peers transitivos incompatibles; la instalación limpia, tipos y pruebas se verifican con el lockfile. Revisar en actualizaciones deliberadas, sin forzar versiones internas del SDK.
 
-La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de prueba; no requiere secretos Neon ni accede a tus ramas. Ejecuta npm ci, lint, tipos, tests y build en push/PR, sin despliegue.
+La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de prueba; no requiere secretos Neon ni accede a tus ramas. Ejecuta npm ci, lint, tipos, tests y build en PR con destino `main` y pushes a `main`, sin despliegue. Cancela ejecuciones anteriores del mismo PR o de `main`; PR distintos no se cancelan entre sí. Las Actions están fijadas a SHA completos de versiones oficiales; al actualizarlas, verificar el commit en el repositorio oficial y actualizar también el comentario de versión. El checkout no conserva credenciales Git.
+
+## Flujo de contribución y CI
+
+1. Actualizar `main` con el árbol limpio y crear una rama `feature/...`, `fix/...` o `chore/...`. Implementar y ejecutar las comprobaciones aplicables en esa rama.
+2. Tras autorización del propietario para publicar, subir la rama y abrir un PR contra `main`. Los pushes a ramas de trabajo sin PR no ejecutan CI.
+3. Esperar a que el job `verify` de **CI** termine correctamente: lint, typecheck, tests PostgreSQL/HTTP y build. Cada actualización del PR vuelve a comprobar el último cambio y cancela la ejecución anterior. No añadir secretos ni usar `pull_request_target` para ejecutar código del PR.
+4. Revisar el Vercel Preview del último commit y completar las comprobaciones manuales aplicables. Vercel y CI se ejecutan en paralelo; la revisión de Preview es posterior a CI en el proceso de aceptación. Su disponibilidad depende de la integración y configuración manual descritas abajo.
+5. Con autorización del propietario, integrar mediante el PR de GitHub cuando CI y Preview estén aceptados. Nunca integrar localmente ni hacer push directo a `main`. El merge vuelve a ejecutar CI sobre el commit integrado.
+
+Esta fase no añade release automático, migraciones productivas ni cambios en el despliegue Git existente de Vercel. Si Vercel ya despliega `main` automáticamente, un merge puede publicar producción: comprobarlo antes de integrar. Los scripts de migración locales siguen limitados a development/testing.
+
+### Configuración manual en GitHub
+
+1. En **Settings → Actions → General**, habilitar GitHub Actions y permitir `actions/checkout` y `actions/setup-node` fijadas a SHA. Mantener permisos predeterminados de solo lectura y desactivada la opción de crear/aprobar PR desde Actions. Esta CI no necesita repository secrets.
+2. Tras subir la rama autorizada y abrir su PR, esperar una ejecución correcta de **CI / verify** para que GitHub conozca el check.
+3. En **Settings → Branches → Add branch protection rule**, seleccionar exactamente `main`: activar **Require a pull request before merging**, **Require status checks to pass before merging**, seleccionar el check `verify` de GitHub Actions y activar **Require branches to be up to date before merging** y **Require conversation resolution before merging**.
+4. Activar **Do not allow bypassing the above settings**; dejar desactivados force pushes y eliminación. No exigir otra aprobación si el propietario es el único mantenedor. Si ya hay un ruleset, aplicar allí las restricciones equivalentes sin crear reglas contradictorias.
+5. Comprobar que un PR con CI fallida no permite merge y que no se admite push directo a `main`. No activar un merge queue en esta fase: el workflow no escucha `merge_group`.
+
+En GitHub Free la protección de ramas requiere un repositorio público. Si el repositorio es privado y la cuenta no ofrece protección, detenerse y decidir visibilidad o plan; no contratar mejoras ni presentar el workflow como protección efectiva. [Protección de ramas](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches).
+
+### Configuración manual en Vercel
+
+1. En el proyecto existente, revisar **Settings → Git** y confirmar que está conectado a `franquirantv/elche-away`. Comprobar en **Settings → Environments → Production** que la rama productiva es `main`. No crear un proyecto ni conectar Git sin revisar antes si esa acción inicia un despliegue.
+2. En **Settings → Environment Variables**, revisar el ámbito **Preview**: PostgreSQL, Auth, cookie secret, propietario explícito y Storage deben ser no productivos y coherentes con los bindings `RELEASE_*`. Seguir la matriz de [RELEASE.md](docs/RELEASE.md#3-matriz-de-entorno-y-preflight); nunca copiar secretos productivos. El modelo actual comparte testing sintético y exige QA con escrituras serializadas; no habilitar pruebas concurrentes contra ese destino compartido.
+3. En **Settings → Build and Deployment**, confirmar Node 22 y Build Command `npm run release:check && npm run build`. No añadir migraciones ni seed al build.
+4. En el PR, comprobar que aparece el despliegue **Preview** del último SHA; abrir su URL y completar el smoke de [RELEASE.md](docs/RELEASE.md#5-smoke-de-preview-y-producción). Configurar su origen exacto en los dominios permitidos de Neon Auth no productivo si fuera necesario; nunca ampliar los dominios de Auth productivo para previews.
+5. Confirmado el nombre real del check Vercel y que puede ejecutarse para todos los PR admitidos, añadirlo a los status checks obligatorios de `main`. Hasta entonces, Preview es una revisión manual pendiente, no un requisito remoto ya activado.
+
+No se incluyen tokens Vercel/Neon en Actions. Mantener planes gratuitos y revisar sus cuotas antes de habilitar integraciones. [Integración Vercel con GitHub](https://vercel.com/docs/git/vercel-for-github).
 
 La auditoría actual muestra avisos altos en la cadena de ESLint y moderados en el esbuild transitivo de Drizzle Kit; este último también aparece al auditar producción por los peers del SDK. No se utiliza un servidor esbuild de desarrollo en la aplicación. No se han aplicado downgrades ni overrides forzados.
 
