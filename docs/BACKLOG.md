@@ -2,7 +2,9 @@
 
 Propuestas para la siguiente fase de Elche Away. Este documento organiza oportunidades; no autoriza implementación, no modifica el [ROADMAP](ROADMAP.md) ni asigna milestones, fechas o compromisos de entrega. Cada identificador permite extraer después una tarea independiente.
 
-La experiencia pública centrada en el mapa es la dirección a explorar. El admin conserva su estructura actual. Las propuestas que amplían o cambian el MVP y la dirección visual de [PRODUCT](PRODUCT.md) y [DESIGN](DESIGN.md) requieren concretarse antes de implementarse; esos documentos siguen describiendo la base existente. [ARCHITECTURE](ARCHITECTURE.md) y [DATABASE](DATABASE.md) recogen los límites técnicos y de datos actuales. La preparación de lanzamiento mantiene su seguimiento en [RELEASE](RELEASE.md).
+La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge solo trabajo pendiente. La implementación de UX-01, UX-02 y UX-03 se describe en [MAP_EXPERIENCE](MAP_EXPERIENCE.md) y su integración se sigue en la [PR #7](https://github.com/franquirantv/elche-away/pull/7), con CI y revisión de Preview pendientes. Retirar un item implementado de este documento no implica que esté integrado o desplegado.
+
+[PRODUCT](PRODUCT.md) y [DESIGN](DESIGN.md) recogen la dirección vigente; [ARCHITECTURE](ARCHITECTURE.md) y [DATABASE](DATABASE.md), los límites técnicos y de datos. La preparación de lanzamiento mantiene su seguimiento en [RELEASE](RELEASE.md).
 
 ## Prioridades y criterios
 
@@ -15,14 +17,14 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ## Administración y sesión
 
-### ADM-01 · Diagnosticar y corregir la pérdida de sesión
+### ADM-01 · Validar la persistencia de sesión durante al menos tres horas
 
-**P0 · Bug/fix.** El propietario comunica pérdidas frecuentes de sesión al salir del panel y navegar por la web; la causa todavía no está identificada.
+**P0 · Bug/fix (validación pendiente).** El diagnóstico y las correcciones del acceso tras navegar por la web y de la renovación de cookies ya están implementados en la [PR #6](https://github.com/franquirantv/elche-away/pull/6); no queda repetir esa implementación ni cambiar duraciones por intuición.
 
-- **Objetivo:** mantener una sesión razonablemente persistente, con un objetivo inicial de al menos tres horas de navegación normal sin pedir otro login.
-- **Valor:** eliminar interrupciones en la gestión del archivo y recuperar confianza en el acceso.
-- **Alcance aproximado:** reproducir login → admin → páginas públicas → regreso al admin, con recargas y varias pestañas; distinguir expiración real de sesión, renovación, cookies y errores de lectura/redirección. Registrar tiempos y evidencia sin secretos. Tras diagnosticar, proponer la corrección mínima y verificar el recorrido y el objetivo temporal, además de logout y rechazo de accesos no autorizados.
-- **Dependencias / decisiones pendientes:** definir si las tres horas incluyen inactividad y cómo se renueva la sesión; revisar integración y configuración de Neon Auth por entorno. No cambiar duraciones o cookies por intuición. Mantener la comprobación exacta de `ADMIN_USER_ID` en cada operación protegida y no prolongar una sesión cerrada explícitamente.
+- **Objetivo:** comprobar que la sesión permite al menos tres horas de navegación normal sin pedir otro login.
+- **Valor:** confirmar que las correcciones resuelven las interrupciones del propietario en el entorno afectado.
+- **Alcance aproximado:** aceptación manual de login → admin → páginas públicas → regreso al admin, con recargas, varias pestañas y duración real de al menos tres horas; verificar también logout y rechazo de accesos no autorizados. Registrar tiempos y evidencia sin secretos. Revisar CI y Preview de la corrección antes de integrar.
+- **Dependencias / decisiones pendientes:** concretar si el objetivo incluye inactividad y contrastar el comportamiento de Neon Auth en el entorno afectado. Abrir una corrección adicional solo si la validación reproduce un fallo; mantener autorización exacta por `ADMIN_USER_ID` y no prolongar una sesión cerrada explícitamente.
 
 ### ADM-02 · Retirar la exposición continua del identificador del propietario
 
@@ -33,37 +35,6 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Alcance aproximado:** localizar la presentación actual y sustituirla por una indicación de sesión comprensible, manteniendo salida y estados de error claros.
 - **Dependencias / decisiones pendientes:** decidir si hace falta una ayuda puntual de configuración/diagnóstico. Ocultar el dato no elimina ni modifica la autorización del servidor; no rediseñar el admin.
 
-## Experiencia pública centrada en el mapa
-
-**Decisiones UX-01/02/03 aceptadas (2026-10-24):** aplicación pública de mapa a pantalla completa, sin cabecera, navbar, footer ni contenido fuera del mapa; controles flotantes de exploración, zoom, desplazamiento y vuelta a la península. Paneles con URLs compartibles, inferior ampliable en móvil y lateral en escritorio. Los enlaces públicos antiguos abren el contenido dentro del mapa; el admin conserva su formato de página. Implementación y verificación local en `feature/map-experience` completadas; pendientes CI, revisión de Preview e integración. El contrato y los recorridos de aceptación están en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). No se dan estos items por cerrados antes de esa revisión.
-
-### UX-01 · Definir la vista principal y la navegación sobre el mapa
-
-**P1 · Cambio estructural de UX.** Es la base que condiciona paneles, estadísticas y colección.
-
-- **Objetivo:** explorar una vista principal donde el mapa articule viajes, estadios y resúmenes mediante cards, paneles, overlays o modales.
-- **Valor:** convertir el archivo en una exploración personal y geográfica coherente.
-- **Alcance aproximado:** definir jerarquía y recorridos mapa → estadio → visitas → viaje, entrada a estadísticas y cierre/regreso; preparar una propuesta revisable con estados vacío, carga, error y mapa no disponible. Delimitar qué contenido se abre sobre el mapa y qué vistas concretas conservan navegación propia.
-- **Dependencias / decisiones pendientes:** coordinar UX-02, UX-03 y VIS-01; decidir el papel de `/` y `/map` y de los listados actuales. Preservar enlaces estables de viajes/estadios, acceso al contenido sin mapa y cobertura de viajes sin coordenadas. El admin queda fuera de esta reestructuración.
-
-### UX-02 · Diseñar el mapa y sus paneles desde móvil
-
-**P1 · Cambio estructural de UX.** Debe formar parte de la base, porque el espacio y los gestos determinan la interacción.
-
-- **Objetivo:** hacer cómoda la exploración táctil sin que paneles y mapa compitan por el control.
-- **Valor:** permitir consultar el archivo desde el móvil con la misma información que en escritorio.
-- **Alcance aproximado:** definir tamaños/estados de panel, selección y cierre, scroll de contenido y gestos de mapa; contemplar orientación y pantallas pequeñas, foco, teclado, lectores de pantalla, contraste y movimiento reducido. Mantener atribución visible y alternativa de lista accesible.
-- **Dependencias / decisiones pendientes:** UX-01; elegir entre panel inferior, lateral u otras soluciones según espacio. Validar recorridos en dispositivos representativos antes de extenderlos a todos los contenidos; hover nunca será el único acceso.
-
-### UX-03 · Hacer navegable y compartible el estado del mapa
-
-**P1 · Cambio estructural de UX.** Evita que la vista única pierda las ventajas de los enlaces actuales.
-
-- **Objetivo:** abrir directamente un viaje o estadio dentro de la experiencia del mapa mediante una URL estable.
-- **Valor:** compartir recuerdos, recargar sin perder el contexto útil y usar atrás/adelante de forma predecible.
-- **Alcance aproximado:** definir el contrato de URL para selección y panel abierto; resolver entrada directa, recarga, cierre, historial, identificadores inexistentes y estadio sin coordenadas. Mantener disponibles las vistas concretas cuando aporten valor.
-- **Dependencias / decisiones pendientes:** UX-01; decidir rutas, parámetros o combinación, compatibilidad con slugs existentes y qué estado merece persistir. No serializar cada gesto ni cambiar slugs al corregir datos.
-
 ## Cartografía y visualización geográfica
 
 ### MAP-01 · Investigar una cartografía más simple y visual
@@ -73,7 +44,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** comparar opciones de mapa menos cargadas y más afines al diario de exploración.
 - **Valor:** dar protagonismo a estadios y viajes y mejorar la legibilidad.
 - **Alcance aproximado:** comparar la base actual con estilos simplificados compatibles y, si aporta valor, alternativas vectoriales o ilustradas. Preparar muestras comparables de península, islas y ciudades autónomas, con marcadores y paneles; evaluar detalle, zoom, móvil, rendimiento, accesibilidad, atribución, licencias y disponibilidad.
-- **Dependencias / decisiones pendientes:** coordinar VIS-01 y UX-01. La base aprobada es Leaflet + teselas estándar OSM con presupuesto de 0 €; no seleccionar proveedor, migrar motor ni contratar servicios en este item sin revisar condiciones y decisión del propietario. Distinguir un cambio de estilo de un cambio de tecnología.
+- **Dependencias / decisiones pendientes:** coordinar VIS-01 y la experiencia implementada en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). La base aprobada es Leaflet + teselas estándar OSM con presupuesto de 0 €; no seleccionar proveedor, migrar motor ni contratar servicios en este item sin revisar condiciones y decisión del propietario. Distinguir un cambio de estilo de un cambio de tecnología.
 
 ### MAP-02 · Mostrar conexión punteada y distancia al estadio
 
@@ -82,7 +53,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** al pasar el cursor o seleccionar un estadio, mostrar una conexión de puntos desde Elche/origen y su distancia aproximada en kilómetros.
 - **Valor:** hacer visible la dimensión del desplazamiento y reforzar el vínculo entre lugares.
 - **Alcance aproximado:** definir aparición, retirada y lectura de la línea y etiqueta, con selección táctil/teclado equivalente al hover; contemplar coordenadas ausentes, islas y movimiento reducido. Aclarar si la línea es solo una conexión gráfica o representa una ruta calculada.
-- **Dependencias / decisiones pendientes:** UX-01/UX-02 y GEO-01. Resolver origen fijo o por viaje, línea recta frente a recorrido real/estimado y solo ida frente a ida y vuelta. No asumir fórmula, servicio de rutas ni desplazamiento real; etiquetar la aproximación elegida.
+- **Dependencias / decisiones pendientes:** selección y paneles del mapa ya disponibles; GEO-01 pendiente. Resolver origen fijo o por viaje, línea recta frente a recorrido real/estimado y solo ida frente a ida y vuelta. No asumir fórmula, servicio de rutas ni desplazamiento real; etiquetar la aproximación elegida.
 
 ### MAP-03 · Resolver marcadores solapados y evaluar clustering
 
@@ -99,10 +70,10 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 **P2 · Nueva funcionalidad.** Aporta relato personal sin depender de completar toda la geografía.
 
-- **Objetivo:** consultar estadio más visitado, rival más visto, distribución por temporadas y balance de resultados, además de los totales existentes.
+- **Objetivo:** consultar estadio más visitado, rival más visto, distribución por temporadas, ampliando los totales y el balance de resultados ya disponibles.
 - **Valor:** descubrir patrones y recuerdos del archivo, más allá de recorrer tarjetas individuales.
-- **Alcance aproximado:** definir métricas, empates en rankings, denominadores, cobertura y enlace al conjunto de viajes que explica cada cifra; explorar panel sobre mapa y vista concreta si resulta útil. Presentar temporadas conocidas sin inferirlas de las fechas y separar competición de categoría del Elche.
-- **Dependencias / decisiones pendientes:** UX-01 y diseño de paneles; auditar disponibilidad de datos antes de prometer métricas. Derivar todo de asistencias en PostgreSQL, sin contadores persistidos; excluir desconocidos solo del cálculo correspondiente e indicar cobertura. El balance requiere partidos finalizados con resultado conocido; no contar penaltis de tanda ni resultados desconocidos como 0–0.
+- **Alcance aproximado:** definir métricas, empates en rankings, denominadores, cobertura y enlace al conjunto de viajes que explica cada cifra; integrar las métricas en el panel de resumen existente. Presentar temporadas conocidas sin inferirlas de las fechas y separar competición de categoría del Elche.
+- **Dependencias / decisiones pendientes:** paneles del mapa ya disponibles; auditar disponibilidad de datos antes de prometer métricas. Derivar todo de asistencias en PostgreSQL, sin contadores persistidos; excluir desconocidos solo del cálculo correspondiente e indicar cobertura. El balance requiere partidos finalizados con resultado conocido; no contar penaltis de tanda ni resultados desconocidos como 0–0.
 
 ### GEO-01 · Definir el significado y cálculo de kilómetros
 
@@ -151,7 +122,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** evolucionar del aspecto corporativo hacia una experiencia más lúdica, visual y personal.
 - **Valor:** expresar la historia del propietario y conectar el archivo digital con el mapa físico.
 - **Alcance aproximado:** preparar una propuesta visual acotada para mapa, card de viaje y panel de estadio: jerarquía, tipografía, color, texturas sutiles, lenguaje de colección y principios de animación. Mantener Elche Away, «Donde tú vayas.», textos en español e identidad de archivo personal.
-- **Dependencias / decisiones pendientes:** coordinar UX-01, UX-02 y MAP-01; revisar la contención visual vigente en DESIGN antes de implementar. Acordar intensidad lúdica sin convertirla automáticamente en logros o gamificación compleja; asegurar legibilidad, rendimiento y movimiento reducido. No aplicar esta reestructuración al admin.
+- **Dependencias / decisiones pendientes:** partir de la navegación y los paneles ya implementados y coordinar MAP-01; revisar la contención visual vigente en DESIGN antes de implementar. Acordar intensidad lúdica sin convertirla automáticamente en logros o gamificación compleja; asegurar legibilidad, rendimiento y movimiento reducido. No aplicar esta reestructuración al admin.
 
 ### VIS-02 · Añadir animaciones y microinteracciones de exploración
 
@@ -160,7 +131,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** acompañar selección, apertura de paneles y descubrimiento de lugares con movimiento útil.
 - **Valor:** hacer más agradable y comprensible la transición entre contexto y detalle.
 - **Alcance aproximado:** transiciones breves y consistentes, feedback de selección y progreso; comprobar interrupción de animaciones, interacción rápida, móviles modestos y alternativa con movimiento reducido.
-- **Dependencias / decisiones pendientes:** VIS-01 y UX-01/UX-02 implementados y evaluados. Acordar presupuesto de rendimiento; ninguna animación debe bloquear lectura o navegación ni ser la única portadora de información.
+- **Dependencias / decisiones pendientes:** VIS-01 y evaluación de la navegación/paneles ya implementados. Acordar presupuesto de rendimiento; ninguna animación debe bloquear lectura o navegación ni ser la única portadora de información.
 
 ### MEM-01 · Fotos y recuerdos por viaje
 
@@ -173,8 +144,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ## Candidatos para la siguiente iteración
 
-Primero **ADM-01**, como investigación y corrección acotada con evidencia del fallo y validación de persistencia. **ADM-02** puede abordarse como tarea pequeña independiente una vez verificada la configuración, sin ampliar el trabajo al resto del admin.
+Completar la **validación pendiente de ADM-01**, especialmente las tres horas reales de sesión. **ADM-02** sigue siendo una mejora pequeña e independiente de la interfaz de sesión.
 
-El siguiente foco de definición pública sería **UX-01 + UX-02 + UX-03**, apoyado por las propuestas de **VIS-01** y la comparativa de **MAP-01**. Su resultado debe ser una navegación y dirección visual revisables antes de repartir la implementación en tareas; no supone ejecutar todos estos items en una sola entrega.
+Con la base de navegación sobre el mapa implementada, el siguiente foco de producto es **MAP-01 + VIS-01**: comparar cartografías y acordar la dirección visual antes de extender estilos. La revisión de CI y Preview de UX-01/02/03 forma parte de la integración de la PR #7, no de una nueva tarea de implementación.
 
-**GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ser una ampliación posterior con datos actuales; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos, animaciones y clustering no bloquean esta definición inicial.
+**GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ampliar el resumen existente; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos, animaciones y clustering no bloquean estas decisiones.
