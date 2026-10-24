@@ -4,7 +4,7 @@
 
 ## Stack instalado
 
-Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
+Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). El mapa combina Leaflet con MapLibre GL JS y el estilo Liberty de OpenFreeMap, basado en OpenStreetMap. npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
 PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
@@ -71,13 +71,17 @@ Genera cada secreto ejecutando `openssl rand -base64 32` por separado. No son co
 
 `npm run dev:testing` usa `.next-testing/`; puede convivir con development y con la suite automática. Se niega a arrancar si falta configuración aislada. No crees una contraseña local ni actives permisos de administrador en Neon para conceder acceso al archivo: los roles del servicio no sustituyen nuestra allowlist.
 
-El proxy de sesión cubre `/admin` y `/auth/account`, donde completa el intercambio nativo del verificador de OAuth; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
+El enlace «Acceso del propietario» del pie abre `/admin` sin precargar el acceso privado durante la navegación pública. Si ya tienes una sesión válida y autorizada, entras directamente; sin sesión se abre el login. Abrir `/auth/sign-in` con una sesión existente lleva al admin si eres el propietario o a `/auth/account` si es otra cuenta. El proxy de sesión cubre `/admin` y `/auth/account`, donde completa el intercambio nativo del verificador de OAuth; cada lectura/acción vuelve a verificar la sesión con Neon (sin confiar en el snapshot de cookie cacheado) y compara el ID. Falta de configuración, sesión caducada/revocada, otra cuenta o error de Auth impiden operar. La aplicación no ofrece una pantalla de registro público ni concede acceso al primer usuario; las cuentas de Auth se gestionan en Neon. La pantalla de cuenta muestra únicamente el ID de su propia sesión, no datos de administración.
 
 En las pestañas de referencias de `/admin` puedes crear, editar y eliminar clubes, estadios, competiciones, divisiones y temporadas. Despliega una referencia para editarla. Los slugs existentes se conservan al cambiar nombres. Eliminar requiere confirmación y falla si existen referencias dependientes; Elche CF nunca se puede eliminar. La importación explícita de archivos se abre en `/admin/import`; no hay fotos.
 
 **Comprobación manual antes de integrar Milestone 3:** verifica en ambos entornos login real con Google, conservación de sesión tras recargar, acceso solo con el ID configurado y cierre de sesión. Si dispones de otra cuenta, confirma que puede autenticarse pero no administrar. Las pruebas automáticas cubren esos límites con sesiones sintéticas y el SDK real, pero no prueban el consentimiento real de Google.
 
 Aceptación manual del Milestone 3 completada por el propietario el 2026-10-18 en development y testing: login con Google, acceso al admin, persistencia tras recargar y logout.
+
+**ADM-01 — comprobación de persistencia pendiente:** en el Preview revisado o en development/testing aislados, iniciar sesión con Google y alternar admin → inicio/viajes/estadios/mapa → admin durante al menos tres horas, incluyendo recargas y una segunda pestaña. Comprobar también un regreso tras más de cinco minutos fuera del admin, logout desde una pestaña y rechazo del acceso al recargar la otra. Anotar entorno, navegador, hora de login/fallo y si aparece login o «Acceso restringido», sin copiar cookies ni tokens. Si se inspeccionan cookies, registrar solo presencia, caducidad y atributos; contrastar la caducidad real con la de la sesión gestionada por Neon. Las pruebas automáticas reproducen la renovación y usan una sesión sintética de más de tres horas; no sustituyen esta comprobación temporal real. La corrección separa renovación en el proxy de verificación sin renovación durante el renderizado; no amplía duraciones ni modifica configuración remota. Las páginas públicas siguen funcionando sin Auth y no renuevan la sesión mientras se permanece en ellas.
+
+Para reproducir específicamente la pantalla reportada, volver desde Viajes y Mapa pulsando «Acceso del propietario» en el pie: debe abrir el panel sin volver a Google. Probar también abrir directamente `/auth/sign-in` con la sesión iniciada; debe llevar al panel. Antes, el pie llevaba siempre a una página de login estática que no comprobaba si la sesión seguía vigente.
 
 Neon gestiona sus tablas de Auth; no las migres con Drizzle ni las cargues con el seed. Para producción habrá que configurar OAuth/dominio propios posteriormente; no está configurada por este milestone.
 
@@ -348,27 +352,29 @@ Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correct
 
 ## Mapa (Milestone 5)
 
-Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. La evolución UX-01/02/03 sustituye el carrusel inicial por una aplicación pública de mapa a pantalla completa con controles y paneles superpuestos; conserva motor, proveedor y reglas de marcadores.
+Liberty de OpenFreeMap, basado en OpenStreetMap, elegido por el propietario el 2026-10-24 en MAP-01, coste 0 €, sin SLA. Sustituye las teselas raster estándar elegidas inicialmente en Milestone 5. Consulta la decisión en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; sin descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. La experiencia pública ocupa toda la pantalla con controles y paneles superpuestos; conserva las reglas de marcadores y navegación de Leaflet.
 
 Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
 
 | Variable | Valor predeterminado |
 | --- | --- |
-| `MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
-| `MAP_TILE_ATTRIBUTION_TEXT` | `OpenStreetMap contributors` |
-| `MAP_TILE_ATTRIBUTION_URL` | `https://www.openstreetmap.org/copyright` |
-| `MAP_TILE_MAX_ZOOM` | `19` (entero entre 1 y 19) |
+| `MAP_STYLE_URL` | `https://tiles.openfreemap.org/styles/liberty` |
+| `MAP_MAX_ZOOM` | `19` (entero entre 1 y 19) |
 
-La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución debe enlazar a HTTPS. Configuración inválida desactiva el mapa y conserva la lista. Para cambiar proveedor, revisar condiciones/coste y configurar URL, atribución y zoom sin cambiar el componente. Reiniciar el servidor local tras editar `.env.local`.
+Liberty de OpenFreeMap es la base elegida por el propietario. Conserva calles, edificios y estadios al ampliar. Leaflet mantiene los pines, paneles y controles; MapLibre GL JS dibuja la capa vectorial mediante su adaptador oficial. No requiere cuenta ni clave. La atribución visible incluye OpenFreeMap, OpenMapTiles y OpenStreetMap. La instancia pública es gratuita, sin garantía de disponibilidad; ver [condiciones y comparación](docs/MAP_STYLE_OPTIONS.md).
+
+La URL del estilo debe usar HTTPS sin usuario, contraseña, query ni fragmento; nunca introducir claves. Los estilos personalizados deben usar las mismas fuentes OSM/OpenMapTiles y mantener sus atribuciones. Configuración inválida desactiva el mapa y conserva la lista. Las antiguas variables `MAP_TILE_URL`, `MAP_TILE_ATTRIBUTION_TEXT`, `MAP_TILE_ATTRIBUTION_URL` y `MAP_TILE_MAX_ZOOM` dejan de utilizarse; pueden retirarse del entorno. Sin nuevas variables se usa Liberty aunque sigan presentes las antiguas. Reiniciar el servidor local tras editar `.env.local`. No se ha cambiado configuración de Vercel ni desplegado.
+
+El mapa vectorial necesita WebGL. Si no está disponible o falla el proveedor, se muestra un aviso y siguen disponibles los paneles, los historiales y la lista de estadios; no se cambia automáticamente de proveedor.
 
 ### Aceptación manual en escritorio y móvil
 
 1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/` en escritorio y móvil (o viewport de 390 px). `/map` debe redirigir a la portada y conservar una selección compartida.
 2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas» en el panel de estadios.
 3. Sin selección debe verse el mapa encuadrando la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o abriendo su estadio desde el listado del panel.
-4. Pulsar un marcador: abre el panel del estadio y actualiza la URL. Abrir uno de sus viajes y volver; comprobar selección, foco y conservación del mapa. Probar URLs directas, recarga, Atrás/Adelante, Cerrar y Escape. En móvil, ampliar/reducir el panel, recorrer su contenido sin arrastrar el mapa, ampliar con dos dedos, girar orientación y usar zoom, botones de dirección y «Volver a la vista inicial de la península ibérica». La rueda amplía el mapa; no hay scroll de página pública. No debe haber desbordamiento horizontal; zoom y atribución quedan fuera del panel. Con movimiento reducido, la selección no debe animarse.
-5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar: debe aparecer el aviso de fallo y los paneles y sus enlaces deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
-6. Desactivar JavaScript y abrir `/?view=stadiums`: cobertura, contenido y enlaces siguen disponibles. Abrir estadio y viaje usando esos enlaces. En red, comprobar HTTPS y Referer en los tiles cuando hay JavaScript; sin JavaScript no se solicitan tiles. La atribución permanece visible fuera del panel.
+4. Pulsar un marcador: abre el panel del estadio y actualiza la URL. Abrir uno de sus viajes y volver; comprobar selección, foco y conservación del mapa. Probar URLs directas, recarga, Atrás/Adelante, Cerrar y Escape. En móvil, ampliar/reducir el panel, recorrer su contenido sin arrastrar el mapa, ampliar con dos dedos, girar orientación y usar zoom y «Volver a la vista inicial de la península ibérica». La rueda amplía el mapa; no hay scroll de página pública. No debe haber desbordamiento horizontal; zoom y atribución quedan fuera del panel. Con movimiento reducido, la selección no debe animarse.
+5. Bloquear `*tiles.openfreemap.org*` en las herramientas de red y recargar: debe aparecer el aviso de fallo y los paneles y sus enlaces deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y abrir `/?view=stadiums`: cobertura, contenido y enlaces siguen disponibles. Abrir estadio y viaje usando esos enlaces. En red, comprobar solicitudes HTTPS al estilo y teselas de OpenFreeMap cuando hay JavaScript; sin JavaScript no se solicitan estos recursos. La atribución permanece visible fuera del panel.
 7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío. Comprobaciones completas de esta evolución en [MAP_EXPERIENCE](docs/MAP_EXPERIENCE.md).
 
 La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
@@ -440,3 +446,7 @@ Verificación del preflight Vercel (2026-10-20): lint y tipos correctos; suite 6
 La lista del preflight incluye también los cuatro metadatos adicionales observados en el build real de Vercel (2026-10-20); la regresión reproduce sus 19 nombres con valores sintéticos y mantiene el rechazo de secretos públicos. Build Command habitual: `npm run release:check && npm run build`; retirar la impresión temporal de nombres después del diagnóstico.
 
 Verificación con los nombres del build real (2026-10-20): lint y tipos correctos; suite 67/67 sin omisiones y base temporal eliminada; build Webpack correcto. La prueba reproduce los 19 nombres públicos observados, incluidos los cuatro omitidos en la primera corrección; no usa credenciales reales. Resultado del redespliegue pendiente de comprobar en Vercel.
+
+## Comparador de estilos sobre OpenStreetMap
+
+Con `npm run dev`, abre `/map-style-previews/index.html`: siete estilos alternativos y OSM estándar, con mapa interactivo y previews comparables de España y Mestalla. OpenFreeMap se puede probar sin cuenta ni clave; las opciones de Stadia funcionan sin clave en localhost y requieren configuración y respetar su cuota gratuita al publicar. El visor de investigación carga MapLibre desde un CDN versionado; no sustituye Leaflet en el mapa público. Condiciones, fuentes y evaluación: [MAP_STYLE_OPTIONS](docs/MAP_STYLE_OPTIONS.md).

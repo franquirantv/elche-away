@@ -82,11 +82,12 @@ for (const { path, label, title } of pages) {
     assert.match(html, /aria-label="Explorar el archivo"/);
     for (const href of ["/?view=trips", "/?view=stadiums", "/?view=summary"]) assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /Volver a la vista inicial de la península ibérica/);
-    assert.match(html, /aria-label="Mover al norte"/);
+    assert.doesNotMatch(html, /aria-label="Mover al/);
     const active = html.match(/<a\b[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
     assert.equal(active.length, path === "/trips" || path === "/stadiums" ? 1 : 0);
     const selected = active[0];
     if (selected) assert.ok(selected.replace(/<[^>]*>/g, "").includes(label));
+    assert.match(html, /href="\/admin"[^>]*>Acceso del propietario<\/a>/);
   });
 }
 
@@ -154,6 +155,7 @@ test("Google login and account bootstrap do not expose admin data to unauthentic
   const response = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([302, 307].includes(response.status));
   assert.match(response.headers.get("location") ?? "", /auth\/sign-in/);
+  assert.ok(!new URL(response.headers.get("location")!, origin).searchParams.has("disableCookieCache"));
   const account = await (await fetch(`${origin}/auth/account`)).text();
   assert.match(account, /Continuar con Google/);
 });
@@ -165,6 +167,7 @@ test("OAuth return exchanges the verifier before rendering the account and grant
   assert.ok([302, 307].includes(callback.status));
   assert.equal(new URL(callback.headers.get("location")!, origin).pathname, "/auth/account");
   assert.doesNotMatch(callback.headers.get("location")!, /neon_auth_session_verifier/);
+  assert.ok(!new URL(callback.headers.get("location")!, origin).searchParams.has("disableCookieCache"));
   const cookie = callback.headers.getSetCookie().find((value) => value.startsWith("__Secure-neon-auth.session_token="))?.split(";")[0];
   assert.ok(cookie, "Native middleware must store the exchanged session token");
   const account = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: cookie } })).text();
@@ -189,6 +192,55 @@ test("verified wrong accounts and forged cookies cannot read administration", as
   const ownAccount = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: identity.otherCookie } })).text();
   assert.match(ownAccount, /synthetic-other-user/);
   assert.doesNotMatch(ownAccount, /Tu identidad está autorizada/);
+});
+
+test("sign-in restores an existing owner session and directs another account to its own status", async () => {
+  const owner = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.ownerCookie } });
+  assert.match(await owner.text(), /Administración|NEXT_REDIRECT/);
+  assert.equal(new URL(owner.url).pathname, "/admin");
+  const other = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.otherCookie } });
+  assert.equal(new URL(other.url).pathname, "/auth/account");
+  assert.match(await other.text(), /no tienes acceso de administrador/);
+  identity.revokeOwner();
+  try {
+    const revoked = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.ownerCookie } });
+    assert.equal(new URL(revoked.url).pathname, "/auth/sign-in");
+    assert.match(await revoked.text(), /Continuar con Google/);
+  } finally { identity.restoreOwner(); }
+});
+
+test("session renewal survives public navigation, reloads and a second tab without cookie writes during render", async () => {
+  identity.renewOwnerCookies(true);
+  // An upstream session already older than the three-hour target, without waiting in real time.
+  identity.ownerAge(3 * 60 * 60 * 1000);
+  try {
+    const first = await fetch(`${origin}/admin?section=clubs`, { headers: { Cookie: identity.ownerCookie }, redirect: "manual" });
+    assert.equal(first.status, 200);
+    assert.match(await first.text(), /Crear referencia/);
+    const renewed = first.headers.getSetCookie().find((cookie) => cookie.startsWith("__Secure-neon-auth.session_token="));
+    assert.ok(renewed, "The middleware must forward the upstream token renewal, not only mint a local cache");
+    assert.match(renewed, /Max-Age=604800/i);
+    const cache = first.headers.getSetCookie().find((cookie) => cookie.startsWith("__Secure-neon-auth.local.session_data="))?.split(";")[0];
+    assert.ok(cache);
+    const cookies = `${identity.ownerCookie}; ${cache}`;
+    for (const path of ["/", "/trips", "/stadiums", "/map"]) {
+      const page = await fetch(`${origin}${path}`, { headers: { Cookie: cookies }, redirect: "manual" });
+      assert.equal(page.status, 200);
+      assert.ok(!page.headers.getSetCookie().some((cookie) => cookie.startsWith("__Secure-neon-auth.")), "Public pages must not maintain or require an Auth session");
+    }
+    for (const cookie of [cookies, cookies, identity.ownerCookie]) {
+      const page = await fetch(`${origin}/admin?section=clubs`, { headers: { Cookie: cookie }, redirect: "manual" });
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /Crear referencia/);
+      assert.ok(page.headers.getSetCookie().some((value) => value.startsWith("__Secure-neon-auth.session_token=")), "Renewal must also reach the browser with a valid local cache");
+    }
+    const account = await fetch(`${origin}/auth/account`, { headers: { Cookie: cookies }, redirect: "manual" });
+    assert.equal(account.status, 200);
+    assert.match(await account.text(), /Tu identidad está autorizada/);
+  } finally {
+    identity.renewOwnerCookies(false);
+    identity.ownerAge(0);
+  }
 });
 
 test("configured owner can read all reference categories through the native session SDK", async () => {
@@ -241,6 +293,11 @@ test("owner identity must remain backed by a live upstream session; outages fail
     const response = await fetch(`${origin}/admin`, { headers: { Cookie: identity.ownerCookie }, redirect: "manual" });
     assert.doesNotMatch(await response.text(), /Crear referencia/);
   } finally { identity.outage(false); }
+  identity.ownerAge(8 * 24 * 60 * 60 * 1000);
+  try {
+    const expired = await fetch(`${origin}/admin`, { headers: { Cookie: identity.ownerCookie }, redirect: "manual" });
+    assert.doesNotMatch(await expired.text(), /Crear referencia/);
+  } finally { identity.ownerAge(0); }
 });
 
 

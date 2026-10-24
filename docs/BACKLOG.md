@@ -21,6 +21,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 **P0 · Bug/fix (validación pendiente).** El diagnóstico y las correcciones del acceso tras navegar por la web y de la renovación de cookies ya están implementados en la [PR #6](https://github.com/franquirantv/elche-away/pull/6); no queda repetir esa implementación ni cambiar duraciones por intuición.
 
+**Aclaración del caso reportado:** la captura muestra el login inmediatamente después de navegar por páginas públicas. El pie enlazaba siempre a `/auth/sign-in`, que mostraba login sin consultar la sesión. Se corrige el acceso del pie a `/admin` y la página de login redirige las sesiones ya verificadas; mostrar esa pantalla no demostraba una pérdida real de sesión. La corrección de renovación anterior cubre un defecto adicional reproducido, distinto de este recorrido.
+
 - **Objetivo:** comprobar que la sesión permite al menos tres horas de navegación normal sin pedir otro login.
 - **Valor:** confirmar que las correcciones resuelven las interrupciones del propietario en el entorno afectado.
 - **Alcance aproximado:** aceptación manual de login → admin → páginas públicas → regreso al admin, con recargas, varias pestañas y duración real de al menos tres horas; verificar también logout y rechazo de accesos no autorizados. Registrar tiempos y evidencia sin secretos. Revisar CI y Preview de la corrección antes de integrar.

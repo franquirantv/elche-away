@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+import type { MapConfig } from "@/lib/map-config";
 import { createStadiumBadge } from "@/lib/stadium-badge";
 import { MapIcon } from "./map-icon";
 
 export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean; crestPath: string | null; crestClubName: string | null };
-export type TileConfig = { url: string; attributionText: string; attributionUrl: string; maxZoom: number };
 const initialBounds: [[number, number], [number, number]] = [[35.7, -9.6], [43.9, 3.4]];
 
-export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onReset }: {
-  stadiums: MapStadium[]; tiles: TileConfig; selectedSlug: string | null; onStadiumSelect: (slug: string) => void; onReset: () => void;
+export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, onReset }: {
+  stadiums: MapStadium[]; config: MapConfig; selectedSlug: string | null; onStadiumSelect: (slug: string) => void; onReset: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const markers = useRef(new Map<string, Marker>());
@@ -25,13 +26,18 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
     let cancelled = false;
     let instance: LeafletMap | undefined;
     const currentMarkers = markers.current;
+    function removeMap() {
+      try { instance?.remove(); } catch {
+        // A failed WebGL constructor can leave the bridge without a renderer to remove.
+        container.current?.replaceChildren();
+      } finally { instance = undefined; }
+    }
     async function initialize() {
       try {
-        const L = await import("leaflet");
+        const [L, { maplibreGL }] = await Promise.all([import("leaflet"), import("@maplibre/maplibre-gl-leaflet")]);
         if (cancelled || !container.current) return;
-        instance = L.map(container.current, { scrollWheelZoom: true, zoomControl: false, attributionControl: false, maxZoom: tiles.maxZoom });
-        const layer = L.tileLayer(tiles.url, { maxZoom: tiles.maxZoom, keepBuffer: 0, updateWhenIdle: true, updateWhenZooming: false, referrerPolicy: "strict-origin-when-cross-origin" });
-        layer.on("tileerror", () => { if (!cancelled) setMessage("No se ha podido cargar parte del mapa. Puedes seguir consultando los viajes y estadios con los controles del archivo."); });
+        instance = L.map(container.current, { scrollWheelZoom: true, zoomControl: false, attributionControl: false, maxZoom: config.maxZoom });
+        const layer = maplibreGL({ style: config.styleUrl, interactive: false });
         for (const stadium of stadiums) {
           if (stadium.latitude === null || stadium.longitude === null) continue;
           const marker = L.marker([stadium.latitude, stadium.longitude], {
@@ -46,6 +52,11 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
         }
         instance.fitBounds(initialBounds, { padding: [36, 72], animate: false });
         layer.addTo(instance);
+        const renderer = layer.getMaplibreMap();
+        renderer.on("error", () => { if (!cancelled) setMessage("No se ha podido cargar parte del mapa. Puedes seguir consultando los viajes y estadios con los controles del archivo."); });
+        const canvas = renderer.getCanvas();
+        canvas.setAttribute("aria-hidden", "true");
+        canvas.tabIndex = -1;
         setMap(instance);
         setMessage("");
       } catch {
@@ -53,12 +64,13 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
           setMessage("El mapa no está disponible. Puedes seguir consultando los viajes y estadios con los controles del archivo.");
           setMap(null);
         }
-        instance?.remove();
+        currentMarkers.clear();
+        removeMap();
       }
     }
     void initialize();
-    return () => { cancelled = true; currentMarkers.clear(); instance?.remove(); };
-  }, [stadiums, tiles]);
+    return () => { cancelled = true; currentMarkers.clear(); removeMap(); };
+  }, [stadiums, config]);
 
   useEffect(() => {
     if (!map) return;
@@ -72,7 +84,7 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
     if (!marker) return;
     function centerSelection() {
       if (!map || !marker) return;
-      const zoom = Math.min(10, tiles.maxZoom);
+      const zoom = Math.min(10, config.maxZoom);
       const mobile = window.matchMedia("(max-width: 767px)").matches;
       const offset: [number, number] = mobile ? [0, map.getSize().y * .21] : [210, 0];
       map.stop();
@@ -81,7 +93,7 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
     centerSelection();
     map.on("resize", centerSelection);
     return () => { map.off("resize", centerSelection); };
-  }, [map, selectedSlug, tiles.maxZoom]);
+  }, [map, selectedSlug, config.maxZoom]);
 
   function resetView() {
     if (!map) return;
@@ -98,7 +110,7 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
       <button type="button" disabled={!map} onClick={() => map?.zoomOut()} aria-label="Alejar" title="Alejar">−</button>
       <button type="button" disabled={!map} onClick={resetView} aria-label="Volver a la vista inicial de la península ibérica" title="Vista inicial de la península"><MapIcon name="locate" /></button>
     </div>
-    <p className="map-attribution">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>{tiles.attributionUrl !== "https://www.openstreetmap.org/copyright" && <> · <a href={tiles.attributionUrl}>{tiles.attributionText}</a></>}</p>
+    <p className="map-attribution"><a href="https://openfreemap.org/">OpenFreeMap</a> · © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a></p>
     <p role="status" className="map-status">{message}</p>
   </section>;
 }

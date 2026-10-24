@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
-import { StadiumMap, type MapStadium, type TileConfig } from "./stadium-map";
+import { StadiumMap, type MapStadium } from "./stadium-map";
+import type { MapConfig } from "@/lib/map-config";
 import { mapDetailHref } from "@/lib/map-navigation";
 import { MapIcon } from "./map-icon";
 
-export function MapExplorer({ stadiums, tiles, selectedSlug, panelKey, title, information, children }: {
-  stadiums: MapStadium[]; tiles: TileConfig | null; selectedSlug: string | null;
+export function MapExplorer({ stadiums, config, selectedSlug, panelKey, title, information, children }: {
+  stadiums: MapStadium[]; config: MapConfig | null; selectedSlug: string | null;
   panelKey: string; title: string | null; information: ReactNode; children: ReactNode;
 }) {
   const router = useRouter();
@@ -20,8 +21,8 @@ export function MapExplorer({ stadiums, tiles, selectedSlug, panelKey, title, in
   const previousKey = useRef(panelKey);
   // Query navigation streams new server content, but unchanged geographic data
   // must not recreate Leaflet or discard the user's viewport.
-  const serialized = JSON.stringify({ stadiums, tiles });
-  const mapData = useMemo(() => JSON.parse(serialized) as { stadiums: MapStadium[]; tiles: TileConfig | null }, [serialized]);
+  const serialized = JSON.stringify({ stadiums, config });
+  const mapData = useMemo(() => JSON.parse(serialized) as { stadiums: MapStadium[]; config: MapConfig | null }, [serialized]);
   const selectStadium = useCallback((slug: string) => {
     startTransition(() => router.push(mapDetailHref("stadium", slug), { scroll: false }));
   }, [router]);
@@ -54,7 +55,7 @@ export function MapExplorer({ stadiums, tiles, selectedSlug, panelKey, title, in
 
   return <div className="explorer">
     <div className="explorer-stage" aria-busy={pending}>
-      {mapData.tiles ? <StadiumMap stadiums={mapData.stadiums} tiles={mapData.tiles} selectedSlug={selectedSlug} onStadiumSelect={selectStadium} onReset={reset} /> : <p className="explorer-unavailable" role="status">El mapa no está disponible. Puedes seguir explorando el archivo desde los paneles.</p>}
+      {mapData.config ? <StadiumMap stadiums={mapData.stadiums} config={mapData.config} selectedSlug={selectedSlug} onStadiumSelect={selectStadium} onReset={reset} /> : <p className="explorer-unavailable" role="status">El mapa no está disponible. Puedes seguir explorando el archivo desde los paneles.</p>}
       <div className="map-identity"><span className="brand-symbol" aria-hidden="true">ea.</span><div><h1>Elche Away</h1><p>Donde tú vayas.</p></div></div>
       <div className="map-actions" role="group" aria-label="Explorar el archivo">
         <Link className="map-action" href="/?view=trips" scroll={false} aria-current={panelKey === "trips" || panelKey.startsWith("trip:") ? "page" : undefined}><MapIcon name="plane" /><span className="map-action-label">Viajes</span></Link>

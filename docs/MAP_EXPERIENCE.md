@@ -1,6 +1,6 @@
 # Experiencia pública sobre el mapa
 
-Alcance: UX-01, UX-02 y UX-03 del [BACKLOG](BACKLOG.md). Dirección confirmada por el propietario el 2026-10-24: una aplicación de exploración con el mapa ocupando todo el viewport y toda la interacción pública superpuesta. No hay navbar, cabecera, footer, secciones debajo ni páginas públicas de detalle separadas. El admin y el login conservan el formato convencional. No incluye nuevas estadísticas, fotos, kilómetros, estadios pendientes, clustering ni cambio de proveedor cartográfico.
+Alcance: UX-01, UX-02 y UX-03 del [BACKLOG](BACKLOG.md). Dirección confirmada por el propietario el 2026-10-24: una aplicación de exploración con el mapa ocupando todo el viewport y toda la interacción pública superpuesta. No hay navbar, cabecera, footer, secciones debajo ni páginas públicas de detalle separadas. El admin y el login conservan el formato convencional. No incluye nuevas estadísticas, fotos, kilómetros, estadios pendientes, clustering ni cambio de proveedor cartográfico en el alcance original. En la release se combina con la elección posterior de Liberty (MAP-01), manteniendo los datos OSM.
 
 ## Navegación y enlaces
 
@@ -46,7 +46,7 @@ El panel es no modal: mapa y controles siguen disponibles sin bloqueo de foco. A
 1. En escritorio y móvil, confirmar que el mapa llena el viewport sin cabecera, navbar, footer ni scroll de documento. El admin y el login deben conservarlos.
 2. Abrir estadio desde marcador, viaje desde sus visitas y volver. El mapa no debe reiniciarse entre paneles.
 3. Copiar cada URL de detalle, abrirla en otra pestaña y recargar. Usar Atrás/Adelante, Cerrar y Escape, incluyendo entrada directa sin historial previo.
-4. Usar zoom y cada dirección; restablecer y comprobar la vista completa de la península, sin selección abierta. Probar rueda y gestos.
+4. Usar zoom y desplazamiento con arrastre/teclado; restablecer y comprobar la vista completa de la península, sin selección abierta. Probar rueda y gestos.
 5. En móvil, ampliar/reducir y leer contenido largo; probar orientación, scroll propio y que zoom, desplazamiento, restablecer y atribución sigan visibles.
 6. Recorrer con teclado: marcadores, controles, título tras navegación y enlaces. Verificar foco visible y movimiento reducido. Completar revisión táctil y de lectores de pantalla en Preview.
 7. Abrir estadios sin coordenadas y viajes sin estadio. Probar sin JavaScript, con teselas bloqueadas y con archivo vacío en datos desechables.

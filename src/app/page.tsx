@@ -10,7 +10,7 @@ import { crestMediaPath } from "@/lib/crest-key";
 import { formatLocation } from "@/lib/geography";
 import { mapDetailHref, mapSelection } from "@/lib/map-navigation";
 import { matchDate, tripTitle } from "@/lib/trips";
-import { mapTileConfig } from "@/server/map-config";
+import { mapConfig } from "@/server/map-config";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const selection = mapSelection(await searchParams);
@@ -76,5 +76,5 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     {!stadiums.length && <p>Todavía no hay estadios visitados publicados. El mapa espera tus viajes.</p>}
     <Link href="/?view=stadiums" scroll={false} className="inline-link">Consultar estadios del archivo</Link>
   </>;
-  return <MapExplorer stadiums={mapStadiums} tiles={mapTileConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title} information={information}>{panel}</MapExplorer>;
+  return <MapExplorer stadiums={mapStadiums} config={mapConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title} information={information}>{panel}</MapExplorer>;
 }
