@@ -277,6 +277,8 @@ La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de p
 
 El CD automático está versionado y permanece deshabilitado hasta configurar los destinos y `PRODUCTION_CD_ENABLED=true`. Tras CI correcta de main crea una recuperación Neon, ensaya/aplica migraciones, despliega el SHA verificado y ejecuta smoke de lectura. `vercel.json` impide el deploy Git de main; Preview sigue en Vercel. Los scripts de migración locales siguen limitados a development/testing. Configuración inicial, secretos, retención, cuotas y recuperación de incidencias: [CD automático](docs/CD.md).
 
+El token Vercel del CD necesita acceso al proyecto, deployments y aliases; no requiere consultar team/billing. Mantener Hobby es una configuración externa: el pipeline no contrata servicios ni amplía planes automáticamente. Los errores API indican proveedor y operación mediante etiquetas fijas, sin registrar IDs ni credenciales.
+
 ### Configuración manual en GitHub
 
 1. En **Settings → Actions → General**, habilitar GitHub Actions y permitir `actions/checkout` y `actions/setup-node` fijadas a SHA. Mantener permisos predeterminados de solo lectura y desactivada la opción de crear/aprobar PR desde Actions. Esta CI no necesita repository secrets.
