@@ -1,5 +1,7 @@
 # Milestone 6: preparación y aceptación del MVP
 
+Actualización de CD: el propietario ha autorizado implementar el pipeline automático de recuperación, migraciones y publicación sin aprobación por release, una vez activado. [CD.md](CD.md) es la guía vigente para ese flujo y sustituye los pasos manuales de migración/publicación de este documento. El inventario inicial, configuración externa y aceptación siguen pendientes; esta implementación no ejecuta operaciones productivas. Se conserva aquí el procedimiento de bootstrap, smoke manual y recuperación de incidencias.
+
 Estado: preparación local; **no autoriza provisioning, push, despliegue, cambios de dominio, credenciales ni datos reales**. No marcar el MVP publicado hasta completar los controles externos y obtener aceptación del propietario. Alcance cerrado a milestones 1–6; sin fotos ni estadísticas nuevas.
 
 ## 1. Verificación reproducible sin producción
@@ -31,6 +33,8 @@ Solicitar al propietario autorización y confirmar el inventario sin secretos an
 **Atención al primer despliegue:** la documentación actual de Vercel indica que el primero de un proyecto nuevo es producción, incluso desde otra rama. No ejecutar `vercel`, conectar Git con auto-deploy ni crear el primer despliegue bajo la suposición de que será preview. Detenerse y acordar el arranque con el propietario. Un despliegue de producción sin dominio asignado sigue usando servicios productivos.
 
 ## 3. Matriz de entorno y preflight
+
+El preflight completo del Build Command se ejecuta únicamente en Production. En `VERCEL_ENV=preview`, `release:check` lo omite para que el build no dependa de conexiones ni bindings productivos; los servicios runtime deben seguir siendo no productivos y aislados. La columna Preview siguiente describe esos servicios runtime y bindings opcionales de diagnóstico, no requisitos para compilar. Un entorno ausente/desconocido sigue fallando. No definir `VERCEL_ENV` manualmente para evitar comprobaciones.
 
 Configurar secretos por ámbito en Vercel; no copiar `.env.local` ni descargar secretos productivos al equipo. Nunca registrar valores ni incluirlos en incidencias/commits. Variables comunes:
 

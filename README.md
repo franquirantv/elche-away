@@ -275,7 +275,7 @@ La CI usa PostgreSQL 17 efímero con bases separadas y credenciales locales de p
 4. Revisar el Vercel Preview del último commit y completar las comprobaciones manuales aplicables. Vercel y CI se ejecutan en paralelo; la revisión de Preview es posterior a CI en el proceso de aceptación. Su disponibilidad depende de la integración y configuración manual descritas abajo.
 5. Con autorización del propietario, integrar mediante el PR de GitHub cuando CI y Preview estén aceptados. Nunca integrar localmente ni hacer push directo a `main`. El merge vuelve a ejecutar CI sobre el commit integrado.
 
-Esta fase no añade release automático, migraciones productivas ni cambios en el despliegue Git existente de Vercel. Si Vercel ya despliega `main` automáticamente, un merge puede publicar producción: comprobarlo antes de integrar. Los scripts de migración locales siguen limitados a development/testing.
+El CD automático está versionado y permanece deshabilitado hasta configurar los destinos y `PRODUCTION_CD_ENABLED=true`. Tras CI correcta de main crea una recuperación Neon, ensaya/aplica migraciones, despliega el SHA verificado y ejecuta smoke de lectura. `vercel.json` impide el deploy Git de main; Preview sigue en Vercel. Los scripts de migración locales siguen limitados a development/testing. Configuración inicial, secretos, retención, cuotas y recuperación de incidencias: [CD automático](docs/CD.md).
 
 ### Configuración manual en GitHub
 
@@ -290,7 +290,7 @@ En GitHub Free la protección de ramas requiere un repositorio público. Si el r
 ### Configuración manual en Vercel
 
 1. En el proyecto existente, revisar **Settings → Git** y confirmar que está conectado a `franquirantv/elche-away`. Comprobar en **Settings → Environments → Production** que la rama productiva es `main`. No crear un proyecto ni conectar Git sin revisar antes si esa acción inicia un despliegue.
-2. En **Settings → Environment Variables**, revisar el ámbito **Preview**: PostgreSQL, Auth, cookie secret, propietario explícito y Storage deben ser no productivos y coherentes con los bindings `RELEASE_*`. Seguir la matriz de [RELEASE.md](docs/RELEASE.md#3-matriz-de-entorno-y-preflight); nunca copiar secretos productivos. El modelo actual comparte testing sintético y exige QA con escrituras serializadas; no habilitar pruebas concurrentes contra ese destino compartido.
+2. En **Settings → Environment Variables**, revisar el ámbito **Preview**: PostgreSQL, Auth, cookie secret, propietario explícito y Storage deben ser exclusivamente no productivos. Preview no requiere los bindings `RELEASE_*` ni configuración productiva para compilar; sus servicios runtime siguen necesitando configuración aislada. Seguir la matriz de [RELEASE.md](docs/RELEASE.md#3-matriz-de-entorno-y-preflight); nunca copiar secretos productivos. El modelo actual comparte testing sintético y exige QA con escrituras serializadas; no habilitar pruebas concurrentes contra ese destino compartido.
 3. En **Settings → Build and Deployment**, confirmar Node 22 y Build Command `npm run release:check && npm run build`. No añadir migraciones ni seed al build.
 4. En el PR, comprobar que aparece el despliegue **Preview** del último SHA; abrir su URL y completar el smoke de [RELEASE.md](docs/RELEASE.md#5-smoke-de-preview-y-producción). Configurar su origen exacto en los dominios permitidos de Neon Auth no productivo si fuera necesario; nunca ampliar los dominios de Auth productivo para previews.
 5. Confirmado el nombre real del check Vercel y que puede ejecutarse para todos los PR admitidos, añadirlo a los status checks obligatorios de `main`. Hasta entonces, Preview es una revisión manual pendiente, no un requisito remoto ya activado.
@@ -322,6 +322,7 @@ Se mantiene ESLint 9 por compatibilidad declarada de los plugins de Next.js, aun
 - [DATABASE.md](docs/DATABASE.md): modelo, restricciones y migraciones.
 - [DESIGN.md](docs/DESIGN.md): dirección visual/UX.
 - [ROADMAP.md](docs/ROADMAP.md): milestones y límite del MVP.
+- [CD.md](docs/CD.md): CD productivo automático, activación inicial y gestión de fallos.
 
 ## Estado del proyecto
 
@@ -413,7 +414,7 @@ Verificación de la ampliación Storage (2026-10-19): lint y typecheck correctos
 
 Procedimiento y puntos de autorización: [RELEASE](docs/RELEASE.md). El milestone está en preparación; producción y aceptación remota siguen pendientes. No se han añadido funcionalidades, migraciones ni despliegues.
 
-- `npm run release:check`: preflight offline del entorno preview/production suministrado al proceso, sin cargar `.env.local` ni conectar servicios. Requiere bindings `RELEASE_DATABASE_HOST` y `RELEASE_AUTH_ORIGIN`, configuración completa del destino y TLS `verify-full`. No sustituye la revisión de aislamiento en las consolas. Build Command propuesto para hosting, tras autorización: `npm run release:check && npm run build`.
+- `npm run release:check`: en Production ejecuta el preflight completo, sin cargar `.env.local` ni conectar servicios; exige bindings `RELEASE_DATABASE_HOST` y `RELEASE_AUTH_ORIGIN`, configuración completa del destino y TLS `verify-full`. En Preview omite ese preflight y permite compilar sin credenciales de servicios; esto no proporciona datos ni habilita acceso runtime. Un entorno ausente/desconocido falla. No sustituye la revisión de aislamiento en las consolas. Build Command común de Vercel: `npm run release:check && npm run build`.
 - `npm run db:rehearse-backup`: ensayo real `pg_dump`/`pg_restore` de datos sintéticos en dos bases temporales propias del servidor testing; compara tablas y journal, y elimina sus recursos. Requiere clientes PostgreSQL compatibles en PATH (en este Mac: `/opt/homebrew/opt/libpq/bin`) y CREATEDB. No copia datos reales, objetos Storage ni Auth gestionado.
 
 El primer despliegue de un proyecto Vercel nuevo puede ser producción; no iniciarlo suponiendo que será preview. Servicios, credenciales, dominio, migraciones productivas y publicación requieren autorización explícita. Los scripts locales continúan rechazando producción.

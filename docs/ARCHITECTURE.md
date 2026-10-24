@@ -1,5 +1,7 @@
 # Proposed architecture
 
+Production delivery: [CD](CD.md) defines the owner-authorized automatic recovery → migration → Vercel deployment → smoke pipeline, initially disabled pending external configuration. GitHub Actions is the sole Production deployer; Vercel Git integration retains Preview only (`main` auto-deploy is disabled in `vercel.json`). Application builds do not run migrations. PostgreSQL recovery branches remain isolated from development, testing and Preview.
+
 Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; Milestone 3 auth/reference editing is complete; Milestone 4a adds local fixture and attendance administration; Milestone 4c adds explicit static-file imports; deployment remains planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.
 
 ## One application
