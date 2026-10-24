@@ -8,7 +8,7 @@ Trabajo implementado retirado de la lista de tareas:
 
 - **UX-01/02/03:** navegación y paneles públicos sobre el mapa, integrados en `main` mediante la [PR #9](https://github.com/franquirantv/elche-away/pull/9). Contrato y comprobaciones en [MAP_EXPERIENCE](MAP_EXPERIENCE.md).
 - **MAP-01:** comparación de estilos y elección e integración de OpenFreeMap Liberty, incluidas en `main` mediante la PR #9. Investigación en [MAP_STYLE_OPTIONS](MAP_STYLE_OPTIONS.md); dirección vigente en [DESIGN](DESIGN.md).
-- **VIS-01/02:** dirección de diario personal, tarjetas, paneles, transiciones y feedback de carga implementados en `feature/vis-01-vis-02`. Comprobaciones locales y límites en [DESIGN](DESIGN.md#vis-0102--diario-de-exploración). Pendientes CI, revisión de Preview e integración en `release/20261025`.
+- **VIS-01/02:** dirección de diario personal, tarjetas, paneles, transiciones y feedback de carga implementados en `feature/vis-01-vis-02`. Comprobaciones locales y límites en [DESIGN](DESIGN.md#vis-0102--diario-de-exploración). El seguimiento de CI, Preview e integración en `release/20261025` está en la [PR #10](https://github.com/franquirantv/elche-away/pull/10).
 
 La implementación no acredita por sí sola aceptación, integración o despliegue. La validación real de tres horas de sesión sigue abierta como ADM-01; no se repite el código de las correcciones ya integradas.
 
@@ -129,6 +129,6 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 Completar la **validación pendiente de ADM-01**, especialmente las tres horas reales de sesión. **ADM-02** sigue siendo una mejora pequeña e independiente de la interfaz de sesión.
 
-La navegación sobre el mapa, la cartografía Liberty y la dirección visual con microinteracciones ya están implementadas. No volver a planificar UX-01/02/03, MAP-01 ni VIS-01/02 como trabajo de desarrollo pendiente. Para VIS-01/02 quedan CI y revisión de Preview antes de integrar la release.
+La navegación sobre el mapa, la cartografía Liberty y la dirección visual con microinteracciones ya están implementadas. No volver a planificar UX-01/02/03, MAP-01 ni VIS-01/02 como trabajo de desarrollo pendiente. La entrega de VIS-01/02 se sigue en la PR #10; no constituye una nueva tarea de desarrollo.
 
 **GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ampliar el resumen existente; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos y clustering siguen pendientes y no bloquean estas decisiones. Cualquier ampliación de las microinteracciones ya disponibles debe tener un alcance nuevo y concreto.
