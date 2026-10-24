@@ -60,6 +60,9 @@ Las 16 escenas cargaron completamente sin excepciones JavaScript durante la capt
 
 ## Integración autorizada de Liberty
 
-El mapa `/map` usa ahora Liberty por defecto mediante Leaflet + MapLibre y `@maplibre/maplibre-gl-leaflet`. Mantiene tarjetas, pines, selección, popups, navegación e historiales y consulta únicamente el archivo PostgreSQL existente. Sin coordenadas se conserva la tarjeta/lista sin pin. Configuración opcional `MAP_STYLE_URL` y `MAP_MAX_ZOOM`, documentada en README y `.env.example`; se retiran los overrides raster antiguos. No requiere cambios de entorno para activar el valor por defecto.
+El mapa de inicio (`/`, con redirección desde `/map`) usa ahora Liberty por defecto mediante Leaflet + MapLibre y `@maplibre/maplibre-gl-leaflet`. La integración con el PR de pantalla completa mantiene pines, selección, paneles con URL, navegación e historiales y consulta únicamente el archivo PostgreSQL existente. Sin coordenadas se conserva la tarjeta/lista sin pin. Configuración opcional `MAP_STYLE_URL` y `MAP_MAX_ZOOM`, documentada en README y `.env.example`; se retiran los overrides raster antiguos. No requiere cambios de entorno para activar el valor por defecto.
 
 Verificación local: tres pruebas de configuración (incluido rechazo de credenciales y valores inválidos), ESLint y tipos focalizados; navegador real con Liberty, ausencia de solicitudes al raster OSM antiguo, créditos visibles, selección de tarjeta/pin, popup, zoom, pausa y reanudación, móvil sin desbordamiento, caída del estilo y falta de WebGL con lista conservada. Los errores durante una inicialización WebGL parcial se limpian sin rechazos no controlados. La suite completa, build y Vercel Preview siguen como comprobaciones de CI/aceptación previas a integrar.
+
+
+Integración con la experiencia a pantalla completa: se resolvieron los conflictos conservando Liberty, los paneles y enlaces compartidos y las correcciones de renovación de sesión de la release. Las comprobaciones que esperaban controles de dirección se ajustaron a su retirada ya aprobada; siguen disponibles arrastre y flechas del teclado. La capa vectorial conserva el mapa entre navegaciones de panel.

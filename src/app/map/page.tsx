@@ -1,36 +1,11 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { EmptyState } from "@/components/empty-state";
-import { StadiumMap, type MapStadium } from "@/components/stadium-map";
-import { getVisitedStadiums } from "@/db/public-archive";
-import { crestMediaPath } from "@/lib/crest-key";
-import { formatLocation } from "@/lib/geography";
-import { mapConfig } from "@/server/map-config";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Mapa" };
-
-export default async function MapPage() {
-  const stadiums = await getVisitedStadiums();
-  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
-  const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
-  const config = mapConfig();
-  return <div className="page-content map-page">
-    <header className="page-heading"><h1>Mapa</h1></header>
-    <p className="map-coverage">Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
-    <a href="#stadium-list" className="inline-link">Ir a la lista de estadios</a>
-    <noscript><p>El mapa interactivo necesita JavaScript. Puedes consultar la cobertura y los enlaces de la lista de estadios.</p></noscript>
-    {config ? <StadiumMap stadiums={mapStadiums} config={config} /> : <p className="map-section">El mapa no está disponible. Puedes usar la lista de estadios.</p>}
-    {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
-    {!stadiums.length && <EmptyState eyebrow="Las chinchetas" title="Todavía no hay estadios" description="El mapa espera tus visitas." message="Todavía no hay estadios visitados publicados." />}
-    <section id="stadium-list" aria-labelledby="stadium-list-title">
-      <h2 id="stadium-list-title" className="group-title">Estadios visitados</h2>
-      <ul className="stadium-grid">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
-        <span className="eyebrow">{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</span>
-        <h3><Link href={`/stadiums/${stadium.slug}`}>{stadium.name}</Link></h3>
-        <p>{formatLocation(stadium.city, stadium.provinceCode)}</p>
-        {stadium.isSpecial && <p className="special-label">Viaje especial</p>}
-        {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas</p>}
-      </li>)}</ul>
-    </section>
-  </div>;
+// Keep the existing entry point and shared selections usable after moving home.
+export default async function MapPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (Array.isArray(value)) for (const item of value) query.append(key, item);
+    else if (value !== undefined) query.set(key, value);
+  }
+  redirect(query.size ? `/?${query}` : "/");
 }

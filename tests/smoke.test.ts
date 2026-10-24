@@ -61,10 +61,10 @@ after(async () => {
 });
 
 const pages = [
-  { path: "/", label: "Inicio", title: /Donde tú(?:<!-- -->)?<br\s*\/>/ },
-  { path: "/trips", label: "Viajes", title: /<h1>Viajes<\/h1>/ },
-  { path: "/stadiums", label: "Estadios", title: /<h1>Estadios<\/h1>/ },
-  { path: "/map", label: "Mapa", title: /<h1>Mapa<\/h1>/ },
+  { path: "/", label: "Mapa", title: /Donde tú vayas\./ },
+  { path: "/trips", label: "Viajes", title: /id="explorer-panel-title"[^>]*>Viajes<\/h2>/ },
+  { path: "/stadiums", label: "Estadios", title: /id="explorer-panel-title"[^>]*>Estadios visitados<\/h2>/ },
+  { path: "/map", label: "Mapa", title: /Donde tú vayas\./ },
 ];
 
 for (const { path, label, title } of pages) {
@@ -77,12 +77,17 @@ for (const { path, label, title } of pages) {
     assert.match(html, /<main[^>]+id="main-content"/);
     assert.match(html, /href="#main-content"/);
     assert.match(html, /Sin vinculación oficial con el Elche CF/);
+    assert.doesNotMatch(html, /class="site-header"|class="site-footer"|class="main-nav"/);
+    assert.match(html, /class="map-app"/);
+    assert.match(html, /aria-label="Explorar el archivo"/);
+    for (const href of ["/?view=trips", "/?view=stadiums", "/?view=summary"]) assert.ok(html.includes(`href="${href}"`));
+    assert.match(html, /Volver a la vista inicial de la península ibérica/);
+    assert.doesNotMatch(html, /aria-label="Mover al/);
+    const active = html.match(/<a\b[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+    assert.equal(active.length, path === "/trips" || path === "/stadiums" ? 1 : 0);
+    const selected = active[0];
+    if (selected) assert.ok(selected.replace(/<[^>]*>/g, "").includes(label));
     assert.match(html, /href="\/admin"[^>]*>Acceso del propietario<\/a>/);
-    const navigation = html.match(/<nav\b[^>]*>[\s\S]*?<\/nav>/)?.[0];
-    assert.ok(navigation, "Primary navigation is server-rendered");
-    for (const page of pages) assert.ok(navigation.includes(`href="${page.path}"`));
-    assert.match(navigation, new RegExp(`aria-current="page"[^>]*>${label}</a>`));
-    assert.equal((navigation.match(/aria-current="page"/g) ?? []).length, 1);
   });
 }
 
@@ -113,7 +118,7 @@ test("public details and stadium visits come from attendance only", async () => 
     assert.match(cupHtml, /Un partido especial/);
     const ground = await fetch(`${origin}/stadiums/estadio-del-corcho-ejemplo`);
     assert.equal(ground.status, 200);
-    assert.match(await ground.text(), /2<!-- --> <!-- -->visitas en el archivo|2 visitas en el archivo/);
+    assert.match((await ground.text()).replace(/<!-- -->/g, ""), /2 visitas en el archivo/);
     const notVisited = await fetch(`${origin}/stadiums/estadio-no-visitado-ejemplo`);
     assert.equal(notVisited.status, 404);
     assert.equal((await fetch(`${origin}/trips/nonexistent-trip`)).status, 404);
@@ -142,7 +147,11 @@ test("a fixture correction appears on the next request without changing its URL"
 test("Google login and account bootstrap do not expose admin data to unauthenticated users", async () => {
   const login = await fetch(`${origin}/auth/sign-in`);
   assert.equal(login.status, 200);
-  assert.match(await login.text(), /Continuar con Google/);
+  const loginHtml = await login.text();
+  assert.match(loginHtml, /Continuar con Google/);
+  assert.match(loginHtml, /class="site-header"/);
+  assert.match(loginHtml, /class="site-footer"/);
+  assert.doesNotMatch(loginHtml, /class="map-app"/);
   const response = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([302, 307].includes(response.status));
   assert.match(response.headers.get("location") ?? "", /auth\/sign-in/);
@@ -214,9 +223,12 @@ test("session renewal survives public navigation, reloads and a second tab witho
     const cache = first.headers.getSetCookie().find((cookie) => cookie.startsWith("__Secure-neon-auth.local.session_data="))?.split(";")[0];
     assert.ok(cache);
     const cookies = `${identity.ownerCookie}; ${cache}`;
-    for (const path of ["/", "/trips", "/stadiums", "/map"]) {
+    for (const [path, expectedStatus] of [
+      ["/", 200], ["/?view=trips", 200], ["/?view=stadiums", 200], ["/?view=summary", 200],
+      ["/trips", 307], ["/stadiums", 307], ["/map", 307],
+    ] as const) {
       const page = await fetch(`${origin}${path}`, { headers: { Cookie: cookies }, redirect: "manual" });
-      assert.equal(page.status, 200);
+      assert.equal(page.status, expectedStatus);
       assert.ok(!page.headers.getSetCookie().some((cookie) => cookie.startsWith("__Secure-neon-auth.")), "Public pages must not maintain or require an Auth session");
     }
     for (const cookie of [cookies, cookies, identity.ownerCookie]) {
@@ -240,6 +252,9 @@ test("configured owner can read all reference categories through the native sess
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.match(html, /Crear referencia/);
+    assert.match(html, /class="site-header"/);
+    assert.match(html, /class="site-footer"/);
+    assert.doesNotMatch(html, /class="map-app"/);
   }
 });
 
@@ -519,10 +534,10 @@ test("home renders attendance totals and explicit result and venue coverage", as
   const { db, pool } = createDatabase(localDatabaseUrl("testing"));
   try {
     const summary = await readHomeSummary(db);
-    const html = (await (await fetch(origin)).text()).replace(/<!-- -->/g, "");
+    const html = (await (await fetch(`${origin}/?view=summary`)).text()).replace(/<!-- -->/g, "");
     assert.match(html, /El archivo en cifras/);
     for (const [label, value] of [["Viajes", summary.trips], ["Estadios conocidos", summary.stadiums], ["Victorias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses]]) {
-      assert.ok(html.includes(`<dt>${label}</dt><dd class="mt-2 text-3xl font-semibold">${value}</dd>`));
+      assert.ok(html.includes(`<dt>${label}</dt><dd>${value}</dd>`));
     }
     assert.ok(html.includes(`Resultados conocidos de partidos finalizados: ${summary.knownResults} de ${summary.trips} viajes`));
     assert.ok(html.includes(`Estadio conocido: ${summary.knownVenues} de ${summary.trips} viajes`));
@@ -531,37 +546,95 @@ test("home renders attendance totals and explicit result and venue coverage", as
 });
 
 
-test("map serves usable stadium links and coordinate coverage without tiles or JavaScript", async () => {
-  const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+test("map and panels explain an empty attendance archive without publishing unattended fixtures", async () => {
+  const { attendance } = await import("../src/db/schema");
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  // This connection belongs exclusively to the uniquely generated test database.
+  const before = await db.select().from(attendance);
+  try {
+    await db.delete(attendance);
+    for (const path of ["/", "/?view=stadiums", "/?view=trips", "/?view=summary"]) {
+      const response = await fetch(`${origin}${path}`);
+      assert.equal(response.status, 200);
+      const html = (await response.text()).replace(/<!-- -->/g, "");
+      assert.match(html, /Estadios con coordenadas: 0 de 0/);
+      assert.match(html, /Todavía no hay estadios visitados publicados/);
+      assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC|href="\/\?stadium=/);
+      if (path.endsWith("trips")) assert.match(html, /Todavía no hay viajes publicados/);
+      if (path.endsWith("summary")) assert.match(html, /Resultados conocidos de partidos finalizados: 0 de 0 viajes/);
+    }
+  } finally {
+    try { if (before.length) await db.insert(attendance).values(before); }
+    finally { await pool.end(); }
+  }
+});
+
+test("map panels preserve attendance-only links and coordinate coverage without JavaScript", async () => {
+  const response = await fetch(`${origin}/?view=stadiums`);
+  const html = (await response.text()).replace(/<!-- -->/g, "");
   assert.match(html, /Estadios con coordenadas: 0 de 2/);
   assert.match(html, /Sin coordenadas: 2/);
-  assert.match(html, /href="\/stadiums\/estadio-del-corcho-ejemplo"/);
-  assert.match(html, /href="\/stadiums\/campo-del-recuerdo-ejemplo"/);
+  assert.match(html, /href="\/\?stadium=estadio-del-corcho-ejemplo"/);
+  assert.match(html, /href="\/\?stadium=campo-del-recuerdo-ejemplo"/);
   assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
   assert.match(html, /Todavía no hay coordenadas/);
   assert.match(html, /class="stadium-map"/);
-  assert.match(html, /aria-label="Seleccionar estadio visitado"/);
-  assert.match(html, /Ver historial del estadio/);
-  assert.doesNotMatch(html, /Activar mapa/);
+  assert.match(html, /Ampliar panel/);
+  assert.doesNotMatch(html, /Ver página completa|Lista sin mapa/);
+  assert.match(html, /El mapa interactivo necesita JavaScript/);
 });
 
-test("map serves the carousel with locations and keeps unlocated visited stadiums", async () => {
+test("shared map details survive direct requests and legacy URLs open their map panel", async () => {
+  const { db, pool } = createDatabase(localDatabaseUrl("testing"));
+  try {
+    const trips = await listTrips(db);
+    for (const trip of trips) {
+      const response = await fetch(`${origin}/?trip=${trip.slug}`);
+      assert.equal(response.status, 200);
+      const html = await response.text();
+      assert.match(html, /Recuerdos del viaje/);
+      assert.doesNotMatch(html, /Ver página completa|Lista sin mapa/);
+      const legacy = await fetch(`${origin}/trips/${trip.slug}`, { redirect: "manual" });
+      assert.equal(legacy.status, 307);
+      assert.equal(new URL(legacy.headers.get("location")!, origin).searchParams.get("trip"), trip.slug);
+      assert.match(html, /Cerrar panel y volver al mapa/);
+      assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
+    }
+    const stadium = await (await fetch(`${origin}/?stadium=estadio-del-corcho-ejemplo`)).text();
+    assert.match(stadium, /Sin coordenadas: puedes consultar sus visitas/);
+    assert.doesNotMatch(stadium, /Ver página completa/);
+    const legacyStadium = await fetch(`${origin}/stadiums/estadio-del-corcho-ejemplo`, { redirect: "manual" });
+    assert.equal(legacyStadium.status, 307);
+    assert.equal(new URL(legacyStadium.headers.get("location")!, origin).searchParams.get("stadium"), "estadio-del-corcho-ejemplo");
+    for (const trip of trips.filter((trip) => trip.stadiumId === fixtureIds.ground)) assert.ok(stadium.includes(`href="/?trip=${trip.slug}"`));
+    for (const query of ["stadium=estadio-no-visitado-ejemplo", `trip=${fixtureIds.unattendedMatch}`, "trip=missing", "view=unknown", "trip=a&stadium=b", "view=trips&view=summary"]) {
+      const response = await fetch(`${origin}/?${query}`);
+      assert.equal(response.status, 404, query);
+      assert.doesNotMatch(await response.text(), /UNATTENDED_FIXTURE_NOT_PUBLIC/);
+    }
+    const alias = await fetch(`${origin}/map?stadium=estadio-del-corcho-ejemplo`, { redirect: "manual" });
+    assert.equal(alias.status, 307);
+    assert.equal(new URL(alias.headers.get("location")!, origin).searchParams.get("stadium"), "estadio-del-corcho-ejemplo");
+  } finally { await pool.end(); }
+});
+
+test("map panels retain unlocated stadiums after another venue gains coordinates", async () => {
   const { db, pool } = createDatabase(localDatabaseUrl("testing"));
   const [before] = await db.select().from(stadiums).where(eq(stadiums.id, fixtureIds.ground));
   try {
     await db.update(stadiums).set({ latitude: 38.2, longitude: -0.7 }).where(eq(stadiums.id, fixtureIds.ground));
-    const html = (await (await fetch(`${origin}/map`)).text()).replace(/<!-- -->/g, "");
+    const html = (await (await fetch(`${origin}/?view=stadiums`)).text()).replace(/<!-- -->/g, "");
     assert.match(html, /Estadios con coordenadas: 1 de 2/);
     assert.match(html, /Sin coordenadas: 1/);
     assert.match(html, /Ciudad de ejemplo/);
-    assert.equal((html.match(/class="map-card"/g) ?? []).length, 2);
-    assert.equal((html.match(/class="map-card-history"/g) ?? []).length, 2);
+    assert.match(html, /campo-del-recuerdo-ejemplo/);
     assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
   } finally {
     await db.update(stadiums).set({ latitude: before.latitude, longitude: before.longitude }).where(eq(stadiums.id, before.id));
     await pool.end();
   }
 });
+
 
 
 test("crest HTTP operations authorize every request, normalize images and recover cleanup", async () => {
