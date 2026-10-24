@@ -89,21 +89,14 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
     map.fitBounds(initialBounds, { padding: [36, 72], animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches });
     onReset();
   }
-  function pan(x: number, y: number) { map?.panBy([x, y], { animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches }); }
 
   return <section aria-label="Mapa interactivo" className="map-section">
     <div ref={container} className="stadium-map" aria-label="Estadios visitados" aria-describedby="map-help" />
-    <p id="map-help" className="sr-only">Arrastra el mapa para explorar. Usa la rueda, dos dedos o los controles para ampliar. También puedes desplazarte con los botones de dirección.</p>
+    <p id="map-help" className="sr-only">Arrastra el mapa para explorar. Usa la rueda, dos dedos o los controles para ampliar. También puedes desplazarte con las flechas del teclado al enfocar el mapa.</p>
     <div className="map-controls" role="group" aria-label="Controles del mapa">
       <button type="button" disabled={!map} onClick={() => map?.zoomIn()} aria-label="Acercar" title="Acercar">+</button>
       <button type="button" disabled={!map} onClick={() => map?.zoomOut()} aria-label="Alejar" title="Alejar">−</button>
       <button type="button" disabled={!map} onClick={resetView} aria-label="Volver a la vista inicial de la península ibérica" title="Vista inicial de la península"><MapIcon name="locate" /></button>
-      <div className="map-pan" role="group" aria-label="Direcciones del mapa">
-        <button type="button" disabled={!map} onClick={() => pan(0, -160)} aria-label="Mover al norte" title="Mover al norte"><MapIcon name="north" /></button>
-        <button type="button" disabled={!map} onClick={() => pan(-160, 0)} aria-label="Mover al oeste" title="Mover al oeste"><MapIcon name="west" /></button>
-        <button type="button" disabled={!map} onClick={() => pan(160, 0)} aria-label="Mover al este" title="Mover al este"><MapIcon name="east" /></button>
-        <button type="button" disabled={!map} onClick={() => pan(0, 160)} aria-label="Mover al sur" title="Mover al sur"><MapIcon name="south" /></button>
-      </div>
     </div>
     <p className="map-attribution">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>{tiles.attributionUrl !== "https://www.openstreetmap.org/copyright" && <> · <a href={tiles.attributionUrl}>{tiles.attributionText}</a></>}</p>
     <p role="status" className="map-status">{message}</p>

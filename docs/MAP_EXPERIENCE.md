@@ -24,7 +24,7 @@ Seleccionar un marcador abre el estadio. Estadio → viaje y viaje → estadio m
 ## Controles y distribución
 
 - Identidad pequeña flotante y botones de Viajes, Estadios y Resumen sobre el mapa.
-- Zoom +/−, cruceta compacta de desplazamiento norte/sur/este/oeste siempre visible y botón «Volver a la vista inicial de la península ibérica» con icono de diana. Restablecer detiene el movimiento actual, encuadra los límites iniciales y cierra el panel; no solicita geolocalización. Viajes usa un avión, Resumen una carpeta con documentos y Estadios un estadio. Los SVG comparten tamaño y alineación con sus etiquetas.
+- Zoom +/− y botón «Volver a la vista inicial de la península ibérica» con icono de diana. Restablecer detiene el movimiento actual, encuadra los límites iniciales y cierra el panel; no solicita geolocalización. El desplazamiento se realiza arrastrando el mapa o con las flechas del teclado al enfocarlo, sin botones direccionales sobrepuestos. Viajes usa un avión, Resumen una carpeta con documentos y Estadios un estadio. Los SVG comparten tamaño y alineación con sus etiquetas.
 - «Archivo» despliega cobertura, identificación como archivo personal sin carácter oficial, ayuda y enlace protegido a administración. No se consulta Auth por visualizar el mapa ni se precarga el acceso privado.
 - Atribución cartográfica siempre visible en una esquina, fuera de los paneles. No se añade información debajo del mapa.
 
