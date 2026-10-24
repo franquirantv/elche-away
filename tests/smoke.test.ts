@@ -77,6 +77,7 @@ for (const { path, label, title } of pages) {
     assert.match(html, /<main[^>]+id="main-content"/);
     assert.match(html, /href="#main-content"/);
     assert.match(html, /Sin vinculación oficial con el Elche CF/);
+    assert.match(html, /href="\/admin"[^>]*>Acceso del propietario<\/a>/);
     const navigation = html.match(/<nav\b[^>]*>[\s\S]*?<\/nav>/)?.[0];
     assert.ok(navigation, "Primary navigation is server-rendered");
     for (const page of pages) assert.ok(navigation.includes(`href="${page.path}"`));
@@ -182,6 +183,21 @@ test("verified wrong accounts and forged cookies cannot read administration", as
   const ownAccount = await (await fetch(`${origin}/auth/account`, { headers: { Cookie: identity.otherCookie } })).text();
   assert.match(ownAccount, /synthetic-other-user/);
   assert.doesNotMatch(ownAccount, /Tu identidad está autorizada/);
+});
+
+test("sign-in restores an existing owner session and directs another account to its own status", async () => {
+  const owner = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.ownerCookie } });
+  assert.match(await owner.text(), /Administración|NEXT_REDIRECT/);
+  assert.equal(new URL(owner.url).pathname, "/admin");
+  const other = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.otherCookie } });
+  assert.equal(new URL(other.url).pathname, "/auth/account");
+  assert.match(await other.text(), /no tienes acceso de administrador/);
+  identity.revokeOwner();
+  try {
+    const revoked = await fetch(`${origin}/auth/sign-in`, { headers: { Cookie: identity.ownerCookie } });
+    assert.equal(new URL(revoked.url).pathname, "/auth/sign-in");
+    assert.match(await revoked.text(), /Continuar con Google/);
+  } finally { identity.restoreOwner(); }
 });
 
 test("session renewal survives public navigation, reloads and a second tab without cookie writes during render", async () => {
