@@ -42,6 +42,10 @@ El Build Command es común a Preview y Production. `release:check` omite el pref
 
 Se espera READY y se comprueba el SHA devuelto. El smoke comprueba HTTP/contenido español y rechaza la página de error, en `/`, `/trips`, `/stadiums`, `/map` y una ruta 404. Prueba la URL de deployment y la pública, cuyo alias debe resolver al mismo SHA; no sigue redirects ni envía credenciales a otros orígenes. El bypass opcional solo se envía al deployment Vercel, no al dominio público. Solo hay lecturas; no login, imports, escrituras ni descargas de tiles.
 
+Si Deployment Protection protege la URL del deployment de Production, `VERCEL_AUTOMATION_BYPASS_SECRET` es obligatorio para el smoke. Obtener o generar el secreto en Vercel → proyecto → Settings → Deployment Protection → Protection Bypass for Automation y guardar el mismo valor en GitHub → Settings → Environments → production → Environment secrets. Que Vercel lo suministre a sus deployments no lo configura en Actions. El workflow ya lo pasa al smoke, que envía `x-vercel-protection-bypass` únicamente a la URL del deployment. No copiarlo al repositorio, al chat ni a variables públicas, ni desactivar Deployment Protection para resolver el fallo.
+
+Sin ese secreto, la URL protegida puede redirigir a Vercel SSO: el smoke rechaza el redirect y termina con `SMOKE_FAILED`, aunque el dominio público funcione. READY y la asignación del alias pueden preceder al smoke; su fallo no retira un deployment ya publicado. Confirmar el SHA y el alias actuales en Vercel, conservar la recuperación y el registro failure, corregir el secreto y reconciliar mediante PR y un SHA nuevo; no reejecutar el SHA fallido ni hacer rollback SQL.
+
 | Fallo | Comportamiento |
 | --- | --- |
 | Configuración, presupuesto o backup/ensayo | No migrar producción ni desplegar. |
