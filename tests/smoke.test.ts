@@ -223,9 +223,12 @@ test("session renewal survives public navigation, reloads and a second tab witho
     const cache = first.headers.getSetCookie().find((cookie) => cookie.startsWith("__Secure-neon-auth.local.session_data="))?.split(";")[0];
     assert.ok(cache);
     const cookies = `${identity.ownerCookie}; ${cache}`;
-    for (const path of ["/", "/trips", "/stadiums", "/map"]) {
+    for (const [path, expectedStatus] of [
+      ["/", 200], ["/?view=trips", 200], ["/?view=stadiums", 200], ["/?view=summary", 200],
+      ["/trips", 307], ["/stadiums", 307], ["/map", 307],
+    ] as const) {
       const page = await fetch(`${origin}${path}`, { headers: { Cookie: cookies }, redirect: "manual" });
-      assert.equal(page.status, 200);
+      assert.equal(page.status, expectedStatus);
       assert.ok(!page.headers.getSetCookie().some((cookie) => cookie.startsWith("__Secure-neon-auth.")), "Public pages must not maintain or require an Auth session");
     }
     for (const cookie of [cookies, cookies, identity.ownerCookie]) {
