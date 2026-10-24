@@ -233,3 +233,56 @@ button:disabled { opacity: 0.6; cursor: wait; }
   .map-status { bottom: 62px; }
   .map-app > .page-content { inset: 16px; }
 }
+
+/* VIS-01/02: a paper travel journal, confined to the public explorer. */
+.explorer {
+  --journal-paper: #fffdf6;
+  --journal-ink: #193e30;
+  --journal-line: #d8d2bf;
+  --journal-accent: #83532d;
+  --journal-fast: 140ms;
+  --journal-enter: 220ms;
+}
+.explorer .journal-label { display: block; margin: 0 0 5px; color: #64604e; font: 700 10px/1.4 Arial, Helvetica, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.explorer .map-identity { background: var(--journal-paper); border-color: var(--journal-line); border-radius: 4px 14px 14px 4px; border-left: 4px solid #155d43; }
+.explorer .map-identity h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 23px; letter-spacing: -.7px; }
+.explorer .map-identity .brand-symbol { border-radius: 10px; rotate: -5deg; }
+.explorer .map-actions { top: calc(max(16px, env(safe-area-inset-top)) + 108px); }
+.explorer .map-action { position: relative; background: var(--journal-paper); border-color: var(--journal-line); border-radius: 5px 12px 12px 5px; transition: transform var(--journal-fast) ease, background-color var(--journal-fast) ease; }
+.explorer .map-action[aria-current="page"] { background: #e8f0de; border-color: #155d43; box-shadow: inset 4px 0 #155d43, 0 3px 12px #19362c20; }
+.explorer .explorer-panel { background-color: var(--journal-paper); border-color: var(--journal-line); border-radius: 8px 8px 14px 14px; animation: journal-reveal var(--journal-enter) ease-out; }
+.explorer .explorer-panel-bar { background: #f3efdf; border-color: var(--journal-line); }
+.explorer .explorer-panel-content { background-image: radial-gradient(#83532d12 .6px, transparent .6px); background-size: 9px 9px; }
+.explorer .explorer-panel-content > .journal-label { margin: 0 0 8px; color: var(--journal-accent); }
+.explorer .explorer-panel-content > h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 700; letter-spacing: -.6px; color: var(--journal-ink); }
+.explorer .group-title { color: #64604e; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.explorer .trip-card { position: relative; border: 1px solid var(--journal-line); border-radius: 5px; background: #fffefa; box-shadow: 0 2px 0 #d8d2bf60; transition: transform var(--journal-fast) ease, border-color var(--journal-fast) ease; }
+.explorer .journal-ticket { border-left: 4px solid #155d43; }
+.explorer .journal-ticket .trip-card-meta { border-bottom: 1px dashed var(--journal-line); padding-bottom: 12px; }
+.explorer .trip-card h3 { font-family: Georgia, 'Times New Roman', serif; line-height: 1.4; }
+.explorer .trip-card h3 a { position: relative; display: inline-block; padding-block: 8px; min-height: 44px; }
+.explorer .trip-score { font-variant-numeric: tabular-nums; color: var(--journal-ink); }
+.explorer .special-label { color: #70421c; background: #f5e7cd; border: 1px solid #d4b88c; border-radius: 3px; padding: 4px 8px; }
+.explorer .explorer-totals > div { background: #fffefa; border-color: var(--journal-line); border-top: 3px solid #155d43; }
+.explorer .explorer-totals dd { font-family: Georgia, 'Times New Roman', serif; font-variant-numeric: tabular-nums; }
+.explorer .explorer-close, .explorer .explorer-expand, .explorer .map-controls button { transition: background-color var(--journal-fast) ease, transform var(--journal-fast) ease; }
+.explorer .explorer-close:hover, .explorer .explorer-expand:hover, .explorer .map-controls button:hover:enabled { background: #e8f0de; }
+.explorer .map-action:active, .explorer .map-controls button:active:enabled { transform: scale(.97); }
+.explorer .archive-link-status { position: absolute; right: 0; bottom: 0; padding: 2px 5px; background: #155d43; color: white; border-radius: 3px; font: 700 10px/1.4 Arial, Helvetica, sans-serif; pointer-events: none; }
+.explorer .archive-link-status:empty { display: none; }
+.explorer .explorer-pending { background: var(--journal-paper); border-left: 4px solid #155d43; font-size: 13px; box-shadow: 0 3px 16px #19362c24; }
+@media (hover: hover) and (pointer: fine) {
+  .explorer .map-action:hover { transform: translateX(2px); background: #edf3e6; }
+  .explorer .trip-card:hover, .explorer .trip-card:focus-within { transform: translateY(-2px); border-color: #155d43; }
+}
+@keyframes journal-reveal { from { opacity: .4; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 767px) {
+  .explorer .map-actions { top: calc(max(16px, env(safe-area-inset-top)) + 76px); }
+  .explorer .map-identity h1 { font-size: 19px; }
+  .explorer .map-identity .journal-label { font-size: 8px; margin-bottom: 2px; }
+  .explorer .explorer-panel-content > h2 { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explorer .explorer-panel { animation: none; }
+  .explorer .map-action, .explorer .trip-card, .explorer .explorer-close, .explorer .explorer-expand, .explorer .map-controls button { transition: none; transform: none; }
+}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { MapExplorer } from "@/components/map-explorer";
 import type { MapStadium } from "@/components/stadium-map";
+import { ArchiveLinkStatus } from "@/components/archive-link-status";
 import { TripList } from "@/components/trip-list";
 import { TripFacts } from "@/components/trip-facts";
 import { getHomeSummary, getTrip, getTrips, getVisitedStadiums } from "@/db/public-archive";
@@ -58,7 +59,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     } else if (selection.view === "stadiums") {
       title = "Estadios visitados";
       panel = <>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<ul className="explorer-stadiums">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
-        <h3><Link href={mapDetailHref("stadium", stadium.slug)} scroll={false}>{stadium.name}</Link></h3><p>{formatLocation(stadium.city, stadium.provinceCode)}</p><p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</p>
+        <h3><Link href={mapDetailHref("stadium", stadium.slug)} scroll={false}>{stadium.name}<ArchiveLinkStatus /></Link></h3><p>{formatLocation(stadium.city, stadium.provinceCode)}</p><p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</p>
         {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas</p>}
       </li>)}</ul></>;
     } else {
