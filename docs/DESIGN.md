@@ -2,9 +2,13 @@
 
 ## Hierarchy
 
-Lead with **Elche Away** and the primary tagline **“Donde tú vayas.”** in Spanish, a small selection of totals, then recent trips and a geographic invitation. Navigation: Home, Trips, Stadiums, Map. A dedicated statistics destination comes later.
+Lead with **Elche Away**, **“Donde tú vayas.”** and the visited-stadium map on `/`. Owner-approved UX-01/02/03 direction (2026-10-24): navigation is Mapa, Viajes, Estadios, Resumen; all four destinations operate within the map experience. The summary reuses existing attendance totals and coverage, not new statistics. Stadium panels list visits; a visit opens a trip panel with fixture facts and personal memories. A dedicated expanded statistics experience remains deferred.
+
+All public interaction occurs within a full-viewport map, inspired by an exploration application: no navbar, page header, footer or content below it. Identity, archive actions, information and controls float over the map. Panels have shareable query URLs; legacy archive routes redirect to those panels. Closing reveals the map; browser back/forward restores the selected content. Panning/zooming does not add history entries or change the URL. See [MAP_EXPERIENCE](MAP_EXPERIENCE.md) for the navigation contract and acceptance checks.
 
 Trip cards prioritize opponent, score or “Result unknown,” date/season, then venue. Details show fixture designation, competition, geography, notes and a linked stadium. Stadium cards emphasize place and visit count; details list every visit. Special matches get a quiet accent and text label; avoid badges/achievement systems. Photos are a later enhancement, never required for a balanced layout.
+
+Owner-approved MAP-01 cartography (2026-10-24): use OpenFreeMap Liberty with OSM/OpenMapTiles data. Keep streets, buildings and stadium geometry visible as the user zooms in; preserve the marker selection and URL-driven panel behavior. The custom local political/terrain experiments are parked.
 
 ## Relationship to the physical map
 
@@ -14,7 +18,7 @@ Use a readable system font initially, simple spacing, and a small set of reusabl
 
 ## Mobile and accessibility
 
-Design single-column trips first, generous touch targets, visible focus and sufficient contrast. Never communicate result or special status through color alone. Map is the main surface on `/map`, displayed immediately with fixed peninsular Spain bounds. Overlay horizontal stadium cards at the bottom, synchronize pin/card selection, and keep attribution outside the overlay. Cards include a separate history link; unlocated stadiums remain readable and linked. Preserve a server-rendered list fallback. Allow pausing map gestures for page scrolling; horizontal card gestures must not drag the map. Respect reduced motion and keyboard navigation. Show missing-coordinate coverage. Include islands/autonomous cities when data warrants; avoid forcing all points into an unreadable mainland view.
+Design single-column trips first, generous touch targets, visible focus and sufficient contrast. Never communicate result or special status through color alone. Map is the main surface on `/`; `/map` preserves old entry links by redirecting to it. Initial bounds remain peninsular Spain. Details use a nonmodal side panel on desktop and a bottom panel on mobile, with explicit Ampliar/Reducir controls and independent vertical content scrolling. Keep map attribution and zoom controls outside the panel. Unlocated stadiums and trips without a known venue stay accessible from the lists; their panels explain missing locations. Preserve server-rendered panel content and links without JavaScript or tiles. The map accepts drag, wheel/touch zoom and explicit zoom controls. A reset button returns to the complete initial peninsula view and closes the panel. There is no page scrolling; only panel content scrolls. Respect reduced motion, keyboard navigation, Escape to close and focus on the new panel heading after navigation. Include islands/autonomous cities when data warrants; avoid forcing all points into an unreadable mainland view. Cartography replacement, new marker designs and playful visual redesign remain separate backlog items.
 
 Unknown dates/results are explicit labels, not blank broken cards. Keep chronology semantics consistent with PRODUCT. Loading, empty, failed-query and unavailable-map states explain what happened without exposing internals.
 
@@ -26,4 +30,4 @@ Use functional mobile-friendly forms, searchable/selectable existing references 
 
 ## Review before coding
 
-Name, tagline and Spanish public language are decided. Supplied visual assets and featuring a personally significant match on Home are optional refinements, not implementation blockers. No logo, mockup, image generation or application components are part of this planning phase.
+Name, tagline and Spanish public language are decided. Supplied visual assets and featuring a personally significant match on Home are optional refinements, not implementation blockers. The map-first navigation and responsive panel decisions are approved for UX-01/02/03; they do not require new artwork. Broader playful styling and cartography research remain separate backlog items.

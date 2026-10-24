@@ -52,15 +52,15 @@ test("polling timeouts and invalid response bodies retain safe API context", asy
 test("production smoke performs only reads and sends bypass only when explicitly supplied", async (t) => {
   const paths: string[] = [];
   t.mock.method(globalThis, "fetch", async (url: URL, init?: RequestInit) => {
-    paths.push(url.pathname);
+    paths.push(url.pathname + url.search);
     assert.equal(init?.method, undefined);
     assert.equal(init?.redirect, "error");
     assert.deepEqual(init?.headers, {});
-    return new Response('<html lang="es"><title>Elche Away</title>Donde tú Viajes Estadios Mapa No encontramos esta página</html>',
+    return new Response('<html lang="es"><title>Elche Away</title>Donde tú Viajes Estadios El archivo en cifras No encontramos esta página</html>',
       { status: url.pathname.includes("missing") ? 404 : 200 });
   });
   await smoke("https://synthetic.example");
-  assert.deepEqual(paths, ["/", "/trips", "/stadiums", "/map", "/__cd_missing_page__"]);
+  assert.deepEqual(paths, ["/", "/?view=trips", "/?view=stadiums", "/?view=summary", "/__cd_missing_page__"]);
 });
 
 test("HTTP 200 with the real archive error boundary fails smoke and stops before later pages", async (t) => {

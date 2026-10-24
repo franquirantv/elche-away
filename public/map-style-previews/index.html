@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Estilos de mapa · Elche Away</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js" integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp" crossorigin="anonymous"></script>
+  <script defer src="preview.js"></script>
+</head>
+<body>
+<header>
+  <a href="/" class="brand">Elche Away <span>· Laboratorio de cartografía</span></a>
+  <h1>El mismo lugar. Otra forma de verlo.</h1>
+  <p>Calles, edificios y estadios al acercarte. Compara diseños sin cambiar el encuadre.</p>
+</header>
+<main>
+  <section class="explorer" aria-label="Comparador interactivo de estilos">
+    <nav id="style-options" aria-label="Estilos disponibles"></nav>
+    <div class="map-column">
+      <div id="scenes" class="scenes" role="group" aria-label="Encuadres de comparación">
+        <button data-scene="overview">España</button>
+        <button data-scene="city">Valencia</button>
+        <button data-scene="stadium">Mestalla · detalle</button>
+        <button data-scene="islands">Canarias</button>
+      </div>
+      <div id="map" aria-label="Mapa interactivo de comparación"></div>
+      <div class="caption"><strong id="active-name">Cargando visor…</strong><span id="active-cost"></span></div>
+      <p id="description"></p>
+      <p id="status" role="status"></p>
+      <p class="hint">Arrastra, amplía o usa el teclado. Cambiar de estilo conserva la cámara. Los encuadres y el estadio son referencias de comparación, no datos del archivo.</p>
+    </div>
+  </section>
+  <section aria-labelledby="gallery-heading" class="gallery-section">
+    <h2 id="gallery-heading">Previews de todos los estilos</h2>
+    <p>Mismo encuadre de España y del estadio. Capturas reales del visor; cada una permite abrir ese estilo.</p>
+    <div id="gallery" class="gallery"></div>
+    <noscript><p>Activa JavaScript para usar el comparador. Las condiciones de las opciones están en la tabla siguiente.</p></noscript>
+  </section>
+  <section class="conditions" aria-labelledby="conditions-heading">
+    <h2 id="conditions-heading">Qué significa «0 €» aquí</h2>
+    <table>
+      <thead><tr><th>Servicio</th><th>Coste y condiciones consultadas el 24/10/2026</th><th>Para Elche Away</th></tr></thead>
+      <tbody>
+        <tr><th><a href="https://openfreemap.org/">OpenFreeMap</a></th><td>Instancia pública gratuita, sin cuenta, tarjeta, clave ni límite publicado de vistas o solicitudes. Requiere atribución; sin SLA.</td><td>La opción más directa. Liberty, Bright, Positron, Fiord y Dark usan la misma fuente OSM con diseños distintos.</td></tr>
+        <tr><th><a href="https://stadiamaps.com/pricing/">Stadia Maps</a></th><td>Plan Free: 200.000 créditos/mes, uso no comercial, sin uso adicional. Cuenta y dominio autorizado para publicar. Localhost permite pruebas sin clave con límites propios.</td><td>Alidade Smooth y Outdoors se pueden probar aquí. No están configurados para producción o Vercel Preview.</td></tr>
+        <tr><th><a href="https://carto.com/legal/basemap-terms/index.html">CARTO</a></th><td>Requiere clave emitida por CARTO. Sus condiciones gratuitas indican 5 millones de solicitudes/mes para uso no comercial y 1 millón para comercial.</td><td>Positron, Dark Matter y Voyager son candidatos condicionados a obtener clave. No se conectan ni se crean cuentas desde esta prueba.</td></tr>
+        <tr><th><a href="https://operations.osmfoundation.org/policies/tiles/">OSM estándar</a></th><td>Servidor comunitario sin tarifa, sujeto a política de uso, caché y atribución; sin garantía de disponibilidad.</td><td>Referencia actual. Mantener Leaflet es suficiente si se conserva este estilo raster.</td></tr>
+      </tbody>
+    </table>
+    <p>Los precios gratuitos de los proveedores no incluyen el alojamiento habitual de la web. No se han activado cuentas, planes de pago ni nuevos servicios de producción.</p>
+    <p>El mapa representa datos cartográficos, no fotografías aéreas. El detalle de edificios y estadios depende de los datos y del estilo. La prueba usa estilos originales, sin personalizar sus etiquetas o colores.</p>
+  </section>
+</main>
+<footer>Prueba independiente MAP-01. El mapa público de Elche Away sigue sin cambios.</footer>
+</body>
+</html>
