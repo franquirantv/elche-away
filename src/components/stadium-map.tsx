@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { createStadiumBadge } from "@/lib/stadium-badge";
+import { MapIcon } from "./map-icon";
 
 export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean; crestPath: string | null; crestClubName: string | null };
 export type TileConfig = { url: string; attributionText: string; attributionUrl: string; maxZoom: number };
@@ -96,13 +97,13 @@ export function StadiumMap({ stadiums, tiles, selectedSlug, onStadiumSelect, onR
     <div className="map-controls" role="group" aria-label="Controles del mapa">
       <button type="button" disabled={!map} onClick={() => map?.zoomIn()} aria-label="Acercar" title="Acercar">+</button>
       <button type="button" disabled={!map} onClick={() => map?.zoomOut()} aria-label="Alejar" title="Alejar">−</button>
-      <button type="button" disabled={!map} onClick={resetView} aria-label="Volver a la vista inicial de la península ibérica" title="Vista inicial de la península">⌂</button>
-      <details className="map-pan"><summary aria-label="Desplazar el mapa" title="Desplazar el mapa">↔</summary><div role="group" aria-label="Direcciones del mapa">
-        <button type="button" disabled={!map} onClick={() => pan(0, -160)} aria-label="Mover al norte">↑</button>
-        <button type="button" disabled={!map} onClick={() => pan(-160, 0)} aria-label="Mover al oeste">←</button>
-        <button type="button" disabled={!map} onClick={() => pan(160, 0)} aria-label="Mover al este">→</button>
-        <button type="button" disabled={!map} onClick={() => pan(0, 160)} aria-label="Mover al sur">↓</button>
-      </div></details>
+      <button type="button" disabled={!map} onClick={resetView} aria-label="Volver a la vista inicial de la península ibérica" title="Vista inicial de la península"><MapIcon name="locate" /></button>
+      <div className="map-pan" role="group" aria-label="Direcciones del mapa">
+        <button type="button" disabled={!map} onClick={() => pan(0, -160)} aria-label="Mover al norte" title="Mover al norte"><MapIcon name="north" /></button>
+        <button type="button" disabled={!map} onClick={() => pan(-160, 0)} aria-label="Mover al oeste" title="Mover al oeste"><MapIcon name="west" /></button>
+        <button type="button" disabled={!map} onClick={() => pan(160, 0)} aria-label="Mover al este" title="Mover al este"><MapIcon name="east" /></button>
+        <button type="button" disabled={!map} onClick={() => pan(0, 160)} aria-label="Mover al sur" title="Mover al sur"><MapIcon name="south" /></button>
+      </div>
     </div>
     <p className="map-attribution">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>{tiles.attributionUrl !== "https://www.openstreetmap.org/copyright" && <> · <a href={tiles.attributionUrl}>{tiles.attributionText}</a></>}</p>
     <p role="status" className="map-status">{message}</p>

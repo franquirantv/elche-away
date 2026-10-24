@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { StadiumMap, type MapStadium, type TileConfig } from "./stadium-map";
 import { mapDetailHref } from "@/lib/map-navigation";
+import { MapIcon } from "./map-icon";
 
 export function MapExplorer({ stadiums, tiles, selectedSlug, panelKey, title, information, children }: {
   stadiums: MapStadium[]; tiles: TileConfig | null; selectedSlug: string | null;
@@ -56,9 +57,9 @@ export function MapExplorer({ stadiums, tiles, selectedSlug, panelKey, title, in
       {mapData.tiles ? <StadiumMap stadiums={mapData.stadiums} tiles={mapData.tiles} selectedSlug={selectedSlug} onStadiumSelect={selectStadium} onReset={reset} /> : <p className="explorer-unavailable" role="status">El mapa no está disponible. Puedes seguir explorando el archivo desde los paneles.</p>}
       <div className="map-identity"><span className="brand-symbol" aria-hidden="true">ea.</span><div><h1>Elche Away</h1><p>Donde tú vayas.</p></div></div>
       <div className="map-actions" role="group" aria-label="Explorar el archivo">
-        <Link className="map-action" href="/?view=trips" scroll={false} aria-current={panelKey === "trips" || panelKey.startsWith("trip:") ? "page" : undefined}><span aria-hidden="true">≡</span>Viajes</Link>
-        <Link ref={opener} className="explorer-open map-action" href="/?view=stadiums" scroll={false} aria-current={panelKey === "stadiums" || panelKey.startsWith("stadium:") ? "page" : undefined}><span aria-hidden="true">⌖</span>Estadios</Link>
-        <Link className="map-action" href="/?view=summary" scroll={false} aria-current={panelKey === "summary" ? "page" : undefined}><span aria-hidden="true">▥</span>Resumen</Link>
+        <Link className="map-action" href="/?view=trips" scroll={false} aria-current={panelKey === "trips" || panelKey.startsWith("trip:") ? "page" : undefined}><MapIcon name="plane" /><span className="map-action-label">Viajes</span></Link>
+        <Link ref={opener} className="explorer-open map-action" href="/?view=stadiums" scroll={false} aria-current={panelKey === "stadiums" || panelKey.startsWith("stadium:") ? "page" : undefined}><MapIcon name="stadium" /><span className="map-action-label">Estadios</span></Link>
+        <Link className="map-action" href="/?view=summary" scroll={false} aria-current={panelKey === "summary" ? "page" : undefined}><MapIcon name="folder" /><span className="map-action-label">Resumen</span></Link>
       </div>
       <details className="explorer-info"><summary>Archivo</summary><div>
         <p>Archivo personal de un aficionado. Sin vinculación oficial con el Elche CF.</p>

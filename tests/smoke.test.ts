@@ -86,7 +86,7 @@ for (const { path, label, title } of pages) {
     const active = html.match(/<a\b[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
     assert.equal(active.length, path === "/trips" || path === "/stadiums" ? 1 : 0);
     const selected = active[0];
-    if (selected) assert.ok(selected.includes(`${label}</a>`));
+    if (selected) assert.ok(selected.replace(/<[^>]*>/g, "").includes(label));
   });
 }
 
