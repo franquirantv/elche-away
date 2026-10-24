@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Navigation } from "@/components/navigation";
+import { Suspense } from "react";
+import { Navigation, NavigationFallback } from "@/components/navigation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <span className="brand-symbol" aria-hidden="true">ea<span>.</span></span>
               <span>Elche Away</span>
             </Link>
-            <Navigation />
+            <Suspense fallback={<NavigationFallback />}><Navigation /></Suspense>
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="site-container">{children}</main>

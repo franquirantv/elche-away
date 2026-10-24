@@ -35,6 +35,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ## Experiencia pública centrada en el mapa
 
+**Decisiones UX-01/02/03 aceptadas (2026-10-24):** mapa como portada, paneles con URLs compartibles y páginas completas conservadas, panel inferior ampliable en móvil y lateral en escritorio. Implementación y verificación local en `feature/map-experience` completadas; pendientes CI, revisión de Preview e integración. El contrato y los recorridos de aceptación están en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). No se dan estos items por cerrados antes de esa revisión.
+
 ### UX-01 · Definir la vista principal y la navegación sobre el mapa
 
 **P1 · Cambio estructural de UX.** Es la base que condiciona paneles, estadísticas y colección.

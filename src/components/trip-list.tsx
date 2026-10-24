@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { PublicTrip } from "@/db/queries";
 import { matchDate, tripScore, tripTitle } from "@/lib/trips";
+import { mapDetailHref } from "@/lib/map-navigation";
 
-export function TripList({ trips }: { trips: PublicTrip[] }) {
+export function TripList({ trips, onMap = false }: { trips: PublicTrip[]; onMap?: boolean }) {
   const dated = trips.filter((trip) => trip.playedOn !== null);
   const undated = trips.filter((trip) => trip.playedOn === null);
   return (
@@ -18,7 +19,7 @@ export function TripList({ trips }: { trips: PublicTrip[] }) {
                   <span>{trip.season ?? "Temporada desconocida"}</span>
                   {trip.isSpecial && <span className="special-label">Un partido especial</span>}
                 </div>
-                <h3><Link href={`/trips/${trip.slug}`}>{tripTitle(trip)}</Link></h3>
+                <h3><Link href={onMap ? mapDetailHref("trip", trip.slug) : `/trips/${trip.slug}`} scroll={!onMap}>{tripTitle(trip)}</Link></h3>
                 <p className="trip-score">{tripScore(trip)}</p>
                 <p>{trip.competition ?? "Competición desconocida"} · {trip.stadiumName ?? "Estadio desconocido"}</p>
               </li>

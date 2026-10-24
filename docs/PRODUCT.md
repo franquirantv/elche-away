@@ -17,7 +17,7 @@ Elche Away is the detailed personal archive behind a physical cork map of Spain.
 
 Visitors see a summary, browse trips, open trip details, explore a map, and open stadium visit histories. The owner signs in, browses locally stored Elche fixtures by season/competition, marks “Asistí a este partido”, and adds personal metadata. Manual fixture creation remains available for missing history. Imported fixtures alone never appear as trips.
 
-- Home: total trips, unique known stadiums, W/D/L from known results, and links into the archive.
+- Home: map-first exploration with panels for trips, stadiums and the existing summary (total trips, unique known stadiums, W/D/L from known results and coverage). Panels have shareable URLs; complete archive pages remain available. See [MAP_EXPERIENCE](MAP_EXPERIENCE.md) for the owner-approved UX-01/02/03 direction.
 - Trips: chronology and details with known season, date, competition, opponent, home/away teams, score, venue/location, public notes and a subtle special-match distinction.
 - Stadiums: visited collection and detail with location and associated visits. Historical participants do not imply current tenancy.
 - Map: markers for visited venues with coordinates, opening venue/visit information. Equivalent list navigation remains available.

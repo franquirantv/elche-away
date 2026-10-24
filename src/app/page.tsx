@@ -1,64 +1,83 @@
 import Link from "next/link";
-import { getHomeSummary } from "@/db/public-archive";
+import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
+import { MapExplorer } from "@/components/map-explorer";
+import type { MapStadium } from "@/components/stadium-map";
+import { TripList } from "@/components/trip-list";
+import { TripFacts } from "@/components/trip-facts";
+import { getHomeSummary, getTrip, getTrips, getVisitedStadiums } from "@/db/public-archive";
+import { crestMediaPath } from "@/lib/crest-key";
+import { formatLocation } from "@/lib/geography";
+import { mapDetailHref, mapSelection } from "@/lib/map-navigation";
+import { matchDate, tripTitle } from "@/lib/trips";
+import { mapTileConfig } from "@/server/map-config";
 
-const sections = [
-  { href: "/trips", number: "01", title: "Los viajes", description: "Cada partido fuera de casa, un recuerdo que guardar." },
-  { href: "/stadiums", number: "02", title: "Los estadios", description: "Gradas distintas. La misma forma de sentirlo." },
-  { href: "/map", number: "03", title: "El mapa", description: "Un lugar para cada chincheta. Una historia detrás." },
-];
-
-export default async function HomePage() {
-  const summary = await getHomeSummary();
-  return (
-    <div className="page-content">
-      <section className="hero" aria-labelledby="home-title">
-        <div className="hero-copy">
-          <p className="eyebrow">Un archivo personal · Elche CF</p>
-          <h1 id="home-title">Donde tú<br /><span>vayas.</span></h1>
-          <p className="lead">Kilómetros, gradas y recuerdos siguiendo al Elche. La historia que hay detrás de cada chincheta.</p>
-          <Link href="/trips" className="button-link">Explorar los viajes <span aria-hidden="true">↗</span></Link>
-        </div>
-        <div className="cork-card" aria-hidden="true">
-          <span className="card-topline">ELCHE AWAY <span>ARCHIVO PERSONAL</span></span>
-          <div className="journey-art"><span className="route-line" /><span className="route-start" /><span className="route-pin" /></div>
-          <p className="card-motto">Siempre contigo.<br /><span>También lejos de casa.</span></p>
-          <span className="card-bottomline">FÚTBOL · CARRETERA · MEMORIA</span>
-        </div>
-      </section>
-      <section className="archive-section" aria-labelledby="summary-title">
-        <div className="section-heading">
-          <h2 id="summary-title">El archivo en cifras</h2>
-          {summary.trips === 0 && <p>Todavía no hay viajes registrados. Aquí irá creciendo la historia.</p>}
-        </div>
-        <dl className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          {[
-            ["Viajes", summary.trips], ["Estadios conocidos", summary.stadiums],
-            ["Victorias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses],
-          ].map(([label, value]) => (
-            <div className="rounded-xl border border-stone-200 p-4" key={label}>
-              <dt>{label}</dt><dd className="mt-2 text-3xl font-semibold">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-4">Resultados conocidos de partidos finalizados: {summary.knownResults} de {summary.trips} viajes.</p>
-        <p>Estadio conocido: {summary.knownVenues} de {summary.trips} viajes.</p>
-        <p>Victorias, empates y derrotas según los goles jugados, incluida la prórroga y sin contar la tanda de penaltis.</p>
-      </section>
-      <section className="archive-section" aria-labelledby="archive-title">
-        <div className="section-heading">
-          <h2 id="archive-title">Un archivo, muchas formas de recordarlo.</h2>
-          <p>Explora los viajes, los estadios y las historias que hay detrás.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {sections.map((section) => (
-            <Link href={section.href} key={section.href} className="section-card">
-              <span className="card-number">{section.number}</span>
-              <h3>{section.title}<span aria-hidden="true">↗</span></h3>
-              <p>{section.description}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
+export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const selection = mapSelection(await searchParams);
+  if (selection.kind === "invalid") notFound();
+  const stadiums = await getVisitedStadiums();
+  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
+  let title: string | null = null;
+  let panel: ReactNode = null;
+  let selectedSlug: string | null = null;
+  let panelKey = "map";
+  if (selection.kind === "stadium") {
+    const stadium = stadiums.find((item) => item.slug === selection.slug);
+    if (!stadium) notFound();
+    const trips = await getTrips(stadium.id);
+    selectedSlug = stadium.slug;
+    title = stadium.name;
+    panelKey = `stadium:${stadium.slug}`;
+    panel = <>
+      <Link href="/?view=stadiums" scroll={false} className="inline-link">← Estadios visitados</Link>
+      <p>{formatLocation(stadium.city, stadium.provinceCode)}</p>
+      <p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"} en el archivo.</p>
+      {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas: puedes consultar sus visitas aunque no aparezca en el mapa.</p>}
+      <Link className="text-link" href={`/stadiums/${stadium.slug}`}>Ver página completa del estadio</Link>
+      <TripList trips={trips} onMap />
+    </>;
+  } else if (selection.kind === "trip") {
+    const trip = await getTrip(selection.slug);
+    if (!trip) notFound();
+    title = tripTitle(trip);
+    panelKey = `trip:${trip.slug}`;
+    selectedSlug = trip.stadiumSlug;
+    const stadium = stadiums.find((item) => item.slug === selectedSlug);
+    panel = <>
+      <Link href={trip.stadiumSlug ? mapDetailHref("stadium", trip.stadiumSlug) : "/?view=trips"} scroll={false} className="inline-link">← {trip.stadiumName ?? "Viajes"}</Link>
+      <p>{matchDate(trip.playedOn)}</p>
+      {trip.isSpecial && <p className="special-label">Un partido especial</p>}
+      {(!stadium || stadium.latitude === null || stadium.longitude === null) && <p>Este viaje no tiene una ubicación disponible en el mapa.</p>}
+      <Link className="text-link" href={`/trips/${trip.slug}`}>Ver página completa del viaje</Link>
+      <TripFacts trip={trip} onMap />
+    </>;
+  } else if (selection.kind === "view") {
+    panelKey = selection.view;
+    if (selection.view === "trips") {
+      title = "Viajes";
+      const trips = await getTrips();
+      panel = <><p>Todos los viajes publicados, también los que todavía no tienen ubicación.</p><Link className="text-link" href="/trips">Ver página completa de viajes</Link>{trips.length ? <TripList trips={trips} onMap /> : <p>Todavía no hay viajes publicados.</p>}</>;
+    } else if (selection.view === "stadiums") {
+      title = "Estadios visitados";
+      panel = <><Link className="text-link" href="/stadiums">Ver página completa de estadios</Link>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<ul className="explorer-stadiums">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
+        <h3><Link href={mapDetailHref("stadium", stadium.slug)} scroll={false}>{stadium.name}</Link></h3><p>{formatLocation(stadium.city, stadium.provinceCode)}</p><p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</p>
+        {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas</p>}
+      </li>)}</ul></>;
+    } else {
+      title = "El archivo en cifras";
+      const summary = await getHomeSummary();
+      panel = <><dl className="explorer-totals">{[["Viajes", summary.trips], ["Estadios conocidos", summary.stadiums], ["Victorias", summary.wins], ["Empates", summary.draws], ["Derrotas", summary.losses]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        <p>Resultados conocidos de partidos finalizados: {summary.knownResults} de {summary.trips} viajes.</p><p>Estadio conocido: {summary.knownVenues} de {summary.trips} viajes.</p><p>Victorias, empates y derrotas según los goles jugados, incluida la prórroga y sin contar la tanda de penaltis.</p>
+      </>;
+    }
+  }
+  const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
+  return <>
+    <MapExplorer stadiums={mapStadiums} tiles={mapTileConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title}>{panel}</MapExplorer>
+    <div className="explorer-coverage"><p>Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
+      {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
+      {!stadiums.length && <p>Todavía no hay estadios visitados publicados. El mapa espera tus viajes.</p>}
+      <Link href="/?view=stadiums" scroll={false} className="inline-link">Lista de estadios sobre el mapa</Link> · <Link href="/stadiums" className="inline-link">Lista sin mapa</Link>
     </div>
-  );
+  </>;
 }

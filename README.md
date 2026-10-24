@@ -223,12 +223,14 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 
 | Ruta | Contenido |
 | --- | --- |
-| `/` | Resumen de viajes, estadios conocidos y victorias/empates/derrotas, derivado de asistencias en PostgreSQL en cada petición, con cobertura de resultados y estadios. |
+| `/` | Portada con mapa Leaflet de estadios visitados y acceso a paneles. |
+| `/?view=trips`, `/?view=stadiums`, `/?view=summary` | Viajes, estadios y resumen del archivo sobre el mapa. Totales derivados de asistencias, con cobertura de resultados y estadios. |
+| `/?stadium=[slug]`, `/?trip=[slug]` | Enlace compartible al panel de un estadio o viaje; incluye acceso a la página completa. |
 | `/trips` | Cronología de asistencias, con fechas desconocidas al final. |
 | `/trips/[slug]` | Partido, temporada/división, competición, estadio y recuerdos del viaje. |
 | `/stadiums` | Solo estadios con visitas registradas, con número de visitas. |
 | `/stadiums/[slug]` | Información y viajes asociados al estadio visitado. |
-| `/map` | Mapa Leaflet de estadios visitados, cobertura de coordenadas y lista alternativa. |
+| `/map` | Entrada compatible: redirige a `/`, conservando la selección de la URL. |
 | `/media/crests/[clubId]/[file]` | WebP público con caché de un escudo actualmente vinculado al club. |
 | `/api/admin/club-crest` | POST de subida, eliminación o limpieza; autorización independiente del propietario. |
 | `/auth/sign-in` | Acceso con Google. |
@@ -239,6 +241,8 @@ Abre **http://localhost:3000**. Si el puerto está ocupado, usa la URL que muest
 Abre los detalles desde los enlaces de las listas: `[slug]` es un parámetro, no una URL literal. El seed ofrece `/stadiums/estadio-del-corcho-ejemplo` y un viaje de información incompleta en `/trips/viaje`. Los nombres/fechas corregidos no regeneran slugs. Un estadio no visitado o un viaje inexistente no es público; muestra 404.
 
 Si la base está vacía, las listas muestran estados vacíos. Si falta configuración, la base no está migrada o PostgreSQL falla, se muestra un error genérico con opción de reintentar: no se inventan datos ni se presentan fallos como un archivo vacío.
+
+La navegación principal abre Mapa, Viajes, Estadios y Resumen dentro de la portada. En escritorio el contenido se abre en un panel lateral; en móvil, en un panel inferior con botones para ampliar/reducir. Cerrar o pulsar Escape revela el mapa. Atrás/adelante y recargar restauran el recurso indicado por la URL; mover el mapa no genera historial. El zoom, la atribución y la pausa de interacción se conservan. Viajes/estadios sin coordenadas siguen disponibles en los paneles y las páginas completas. Sin JavaScript o teselas, se puede navegar por los enlaces renderizados por el servidor. El admin mantiene sus rutas y estructura. Decisiones y comprobación manual en [MAP_EXPERIENCE](docs/MAP_EXPERIENCE.md).
 
 ## Scripts y pruebas
 
@@ -342,7 +346,7 @@ Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correct
 
 ## Mapa (Milestone 5)
 
-Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. Un carrusel superpuesto conecta tarjetas y pines.
+Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. La evolución UX-01/02/03 sustituye el carrusel inicial por paneles navegables sobre el mapa de portada; conserva motor, proveedor y reglas de marcadores.
 
 Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
 
@@ -357,13 +361,13 @@ La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución d
 
 ### Aceptación manual en escritorio y móvil
 
-1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/map` en escritorio y móvil (o viewport de 390 px).
-2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar `/map`. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas».
-3. Al entrar debe verse el mapa grande encuadrando toda la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o eligiendo su tarjeta.
-4. En escritorio, pulsar una tarjeta: debe acercarse suavemente a su estadio, abrir información y marcar su tarjeta. Pulsar otro pin: debe seleccionar y llevar su tarjeta a la vista sin desplazar la página. Comprobar nombre, localidad, visitas y enlace «Ver historial del estadio». Probar Tab, Enter, zoom y foco visible. En móvil (390 px y dispositivo real), recorrer horizontalmente las tarjetas sin arrastrar el mapa, pulsar tarjeta y pin, ampliar con dos dedos, girar orientación y usar «Pausar interacción» para desplazar la página. La rueda de escritorio desplaza la página. No debe haber desbordamiento horizontal de la página; la atribución no queda cubierta. Con movimiento reducido, los cambios de selección no deben animarse.
-5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar `/map`: debe aparecer el aviso de fallo y los enlaces de tarjetas y lista deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
-6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, comprobar HTTPS y Referer en los tiles; sin JavaScript no se solicitan tiles. La atribución permanece visible en la esquina superior derecha del mapa a cualquier zoom, fuera del carrusel.
-7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío.
+1. Ejecutar `npm run dev` con las conexiones de desarrollo no productivas habituales; abrir `/` en escritorio y móvil (o viewport de 390 px). `/map` debe redirigir a la portada y conservar una selección compartida.
+2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas» en el panel de estadios.
+3. Sin selección debe verse el mapa encuadrando la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o abriendo su estadio desde el listado del panel.
+4. Pulsar un marcador: abre el panel del estadio y actualiza la URL. Abrir uno de sus viajes y volver; comprobar selección, foco y conservación del mapa. Probar URLs directas, recarga, Atrás/Adelante, Cerrar y Escape. En móvil, ampliar/reducir el panel, recorrer su contenido sin arrastrar el mapa, ampliar con dos dedos, girar orientación y usar «Pausar interacción» para desplazar la página. La rueda de escritorio desplaza la página. No debe haber desbordamiento horizontal; zoom y atribución quedan fuera del panel. Con movimiento reducido, la selección no debe animarse.
+5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar: debe aparecer el aviso de fallo y los paneles, listas y enlaces completos deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y abrir `/?view=stadiums`: cobertura, contenido y enlaces siguen disponibles. Abrir estadio y viaje usando esos enlaces. En red, comprobar HTTPS y Referer en los tiles cuando hay JavaScript; sin JavaScript no se solicitan tiles. La atribución permanece visible fuera del panel.
+7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío. Comprobaciones completas de esta evolución en [MAP_EXPERIENCE](docs/MAP_EXPERIENCE.md).
 
 La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
 
@@ -375,7 +379,7 @@ Refinamiento de experiencia de la rama 5: encuadre fijo peninsular, mapa inmedia
 
 Desde `/admin?section=clubs`, crea primero el club o abre uno existente. «Subir escudo»/«Reemplazar escudo» admite PNG, JPEG y WebP de hasta **1 MB (1.000.000 bytes)**. Se valida el contenido real, se rechazan SVG/animaciones y se guarda una copia WebP sin metadatos, de hasta 512×512, con transparencia y proporciones conservadas. «Eliminar escudo» exige confirmación y conserva el club. Ya no se gestionan archivos en `public/crests/`.
 
-El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo aparece si todas las visitas tienen el mismo rival conocido y su archivo carga. Varios rivales, alguno desconocido, falta de imagen o fallo de Storage producen el badge neutro «ea.». La selección mantiene borde cálido/halo y sincronización pin–tarjeta. No se incluyen escudos reales en el repositorio.
+El escudo representa al **rival de las visitas**, nunca al propietario del estadio. Solo aparece si todas las visitas tienen el mismo rival conocido y su archivo carga. Varios rivales, alguno desconocido, falta de imagen o fallo de Storage producen el badge neutro «ea.». La selección mantiene borde cálido/halo y sincronización entre pin y panel. No se incluyen escudos reales en el repositorio.
 
 Neon Object Storage fue aprobado y confirmado disponible en el plan Free, región Frankfurt. Cuotas actuales: 5 GB de objetos por proyecto y 5 GB mensuales de transferencia pública compartida con el resto de servicios. Mantener Free y vigilar consumo para conservar 0 €; no contratar upgrades. [Límites oficiales](https://neon.com/docs/introduction/plans). Las pruebas reales de conectividad solo crean y eliminan sus propios objetos sintéticos en los buckets no productivos.
 
