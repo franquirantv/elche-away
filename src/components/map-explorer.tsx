@@ -7,6 +7,7 @@ import { StadiumMap, type MapStadium } from "./stadium-map";
 import type { MapConfig } from "@/lib/map-config";
 import { mapDetailHref } from "@/lib/map-navigation";
 import { MapIcon } from "./map-icon";
+import { ArchiveLinkStatus } from "./archive-link-status";
 
 export function MapExplorer({ stadiums, config, selectedSlug, panelKey, title, information, children }: {
   stadiums: MapStadium[]; config: MapConfig | null; selectedSlug: string | null;
@@ -56,11 +57,11 @@ export function MapExplorer({ stadiums, config, selectedSlug, panelKey, title, i
   return <div className="explorer">
     <div className="explorer-stage" aria-busy={pending}>
       {mapData.config ? <StadiumMap stadiums={mapData.stadiums} config={mapData.config} selectedSlug={selectedSlug} onStadiumSelect={selectStadium} onReset={reset} /> : <p className="explorer-unavailable" role="status">El mapa no está disponible. Puedes seguir explorando el archivo desde los paneles.</p>}
-      <div className="map-identity"><span className="brand-symbol" aria-hidden="true">ea.</span><div><h1>Elche Away</h1><p>Donde tú vayas.</p></div></div>
+      <div className="map-identity"><span className="brand-symbol" aria-hidden="true">ea.</span><div><span className="journal-label">Diario de un aficionado</span><h1>Elche Away</h1><p>Donde tú vayas.</p></div></div>
       <div className="map-actions" role="group" aria-label="Explorar el archivo">
-        <Link className="map-action" href="/?view=trips" scroll={false} aria-current={panelKey === "trips" || panelKey.startsWith("trip:") ? "page" : undefined}><MapIcon name="plane" /><span className="map-action-label">Viajes</span></Link>
-        <Link ref={opener} className="explorer-open map-action" href="/?view=stadiums" scroll={false} aria-current={panelKey === "stadiums" || panelKey.startsWith("stadium:") ? "page" : undefined}><MapIcon name="stadium" /><span className="map-action-label">Estadios</span></Link>
-        <Link className="map-action" href="/?view=summary" scroll={false} aria-current={panelKey === "summary" ? "page" : undefined}><MapIcon name="folder" /><span className="map-action-label">Resumen</span></Link>
+        <Link className="map-action" href="/?view=trips" scroll={false} aria-current={panelKey === "trips" || panelKey.startsWith("trip:") ? "page" : undefined}><MapIcon name="plane" /><span className="map-action-label">Viajes</span><ArchiveLinkStatus /></Link>
+        <Link ref={opener} className="explorer-open map-action" href="/?view=stadiums" scroll={false} aria-current={panelKey === "stadiums" || panelKey.startsWith("stadium:") ? "page" : undefined}><MapIcon name="stadium" /><span className="map-action-label">Estadios</span><ArchiveLinkStatus /></Link>
+        <Link className="map-action" href="/?view=summary" scroll={false} aria-current={panelKey === "summary" ? "page" : undefined}><MapIcon name="folder" /><span className="map-action-label">Resumen</span><ArchiveLinkStatus /></Link>
       </div>
       <details className="explorer-info"><summary>Archivo</summary><div>
         <p>Archivo personal de un aficionado. Sin vinculación oficial con el Elche CF.</p>
@@ -70,9 +71,9 @@ export function MapExplorer({ stadiums, config, selectedSlug, panelKey, title, i
         <noscript><p>El mapa interactivo necesita JavaScript. Puedes seguir consultando los paneles mediante sus enlaces.</p></noscript>
       </div></details>
       {pending && <p className="explorer-pending" role="status">Cargando archivo…</p>}
-      {title && <section className="explorer-panel" data-expanded={expanded} aria-labelledby="explorer-panel-title">
+      {title && <section key={panelKey} className="explorer-panel" data-expanded={expanded} aria-labelledby="explorer-panel-title">
         <div className="explorer-panel-bar"><button type="button" className="explorer-expand" aria-expanded={expanded} aria-controls="explorer-panel-content" onClick={() => setExpanded(!expanded)}>{expanded ? "Reducir panel" : "Ampliar panel"}</button><Link href="/" scroll={false} className="explorer-close" aria-label="Cerrar panel y volver al mapa">Cerrar ×</Link></div>
-        <div className="explorer-panel-content" id="explorer-panel-content" ref={content}><h2 id="explorer-panel-title" ref={heading} tabIndex={-1}>{title}</h2>{children}</div>
+        <div className="explorer-panel-content" id="explorer-panel-content" ref={content}><p className="journal-label">{panelKey.startsWith("stadium:") ? "Un lugar en mi historia" : panelKey.startsWith("trip:") ? "Una página del diario" : "Mi archivo de viajes"}</p><h2 id="explorer-panel-title" ref={heading} tabIndex={-1}>{title}</h2>{children}</div>
       </section>}
     </div>
     <noscript><style>{`.explorer-panel { height: calc(100dvh - 180px); max-height: calc(100dvh - 180px); } .explorer-panel-bar button, .map-controls { display: none; }`}</style></noscript>

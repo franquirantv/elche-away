@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArchiveLinkStatus } from "./archive-link-status";
 import type { PublicTrip } from "@/db/queries";
 import { matchDate, tripScore, tripTitle } from "@/lib/trips";
 import { mapDetailHref } from "@/lib/map-navigation";
@@ -13,13 +14,13 @@ export function TripList({ trips, onMap = false }: { trips: PublicTrip[]; onMap?
           <h2 className="group-title">{title}</h2>
           <ul className="trip-list">
             {rows.map((trip) => (
-              <li key={trip.slug} className="trip-card">
+              <li key={trip.slug} className="trip-card journal-ticket">
                 <div className="trip-card-meta">
                   {trip.playedOn ? <time dateTime={trip.playedOn}>{matchDate(trip.playedOn)}</time> : <span>Fecha desconocida</span>}
                   <span>{trip.season ?? "Temporada desconocida"}</span>
                   {trip.isSpecial && <span className="special-label">Un partido especial</span>}
                 </div>
-                <h3><Link href={onMap ? mapDetailHref("trip", trip.slug) : `/trips/${trip.slug}`} scroll={!onMap}>{tripTitle(trip)}</Link></h3>
+                <h3><Link href={onMap ? mapDetailHref("trip", trip.slug) : `/trips/${trip.slug}`} scroll={!onMap}>{tripTitle(trip)}{onMap && <ArchiveLinkStatus />}</Link></h3>
                 <p className="trip-score">{tripScore(trip)}</p>
                 <p>{trip.competition ?? "Competición desconocida"} · {trip.stadiumName ?? "Estadio desconocido"}</p>
               </li>
