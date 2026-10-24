@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+import type { MapConfig } from "@/lib/map-config";
 import { createStadiumBadge } from "@/lib/stadium-badge";
 
 export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean; crestPath: string | null; crestClubName: string | null };
-export type TileConfig = { url: string; attributionText: string; attributionUrl: string; maxZoom: number };
 
-export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles: TileConfig }) {
+export function StadiumMap({ stadiums, config }: { stadiums: MapStadium[]; config: MapConfig }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markers = useRef(new Map<string, Marker>());
@@ -23,20 +24,20 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
     let cancelled = false;
     let map: LeafletMap | undefined;
     const currentMarkers = markers.current;
+    function removeMap() {
+      try { map?.remove(); } catch {
+        // The bridge's removal hook can run before a failed WebGL constructor assigned its renderer.
+        container.current?.replaceChildren();
+      } finally { map = undefined; mapRef.current = null; }
+    }
     async function initialize() {
       try {
-        const L = await import("leaflet");
+        const [L, { maplibreGL }] = await Promise.all([import("leaflet"), import("@maplibre/maplibre-gl-leaflet")]);
         if (cancelled || !container.current) return;
-        map = L.map(container.current, { scrollWheelZoom: false, zoomControl: false, attributionControl: false, maxZoom: tiles.maxZoom });
+        map = L.map(container.current, { scrollWheelZoom: false, zoomControl: false, attributionControl: false, maxZoom: config.maxZoom });
         mapRef.current = map;
         L.control.zoom({ zoomInTitle: "Acercar", zoomOutTitle: "Alejar" }).addTo(map);
-        const layer = L.tileLayer(tiles.url, {
-          maxZoom: tiles.maxZoom, keepBuffer: 0, updateWhenIdle: true,
-          updateWhenZooming: false, referrerPolicy: "strict-origin-when-cross-origin",
-        });
-        layer.on("tileerror", () => {
-          if (!cancelled) setMessage("No se ha podido cargar parte del mapa. Puedes seguir usando las tarjetas y la lista de estadios.");
-        });
+        const layer = maplibreGL({ style: config.styleUrl, interactive: false });
         for (const stadium of stadiums) {
           if (stadium.latitude === null || stadium.longitude === null) continue;
           const popup = document.createElement("div");
@@ -74,18 +75,24 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
         // Fixed geographic bounds, independent of attendance and available coordinates.
         map.fitBounds([[35.7, -9.6], [43.9, 3.4]], { paddingTopLeft: [20, 20], paddingBottomRight: [20, 225], animate: false });
         layer.addTo(map);
+        const renderer = layer.getMaplibreMap();
+        renderer.on("error", () => {
+          if (!cancelled) setMessage("No se ha podido cargar parte del mapa. Puedes seguir usando las tarjetas y la lista de estadios.");
+        });
+        const canvas = renderer.getCanvas();
+        canvas.setAttribute("aria-hidden", "true");
+        canvas.tabIndex = -1;
         setReady(true);
         setMessage("");
       } catch {
-        if (!cancelled) setMessage("El mapa no está disponible. Puedes seguir usando las tarjetas y la lista de estadios.");
-        map?.remove();
-        map = undefined;
-        mapRef.current = null;
+        if (!cancelled) { setReady(false); setMessage("El mapa no está disponible. Puedes seguir usando las tarjetas y la lista de estadios."); }
+        currentMarkers.clear();
+        removeMap();
       }
     }
     void initialize();
-    return () => { cancelled = true; currentMarkers.clear(); map?.remove(); mapRef.current = null; };
-  }, [stadiums, tiles]);
+    return () => { cancelled = true; currentMarkers.clear(); removeMap(); };
+  }, [stadiums, config]);
 
   function selectStadium(stadium: MapStadium) {
     const map = mapRef.current;
@@ -93,7 +100,7 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
     if (!map || !marker) return;
     setSelected(stadium.slug);
     const point = marker.getLatLng();
-    const zoom = Math.min(12, tiles.maxZoom);
+    const zoom = Math.min(12, config.maxZoom);
     // Keep the selected pin above the cards rather than hidden behind them.
     const center = map.unproject(map.project(point, zoom).add([0, 10]), zoom);
     const animate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -123,7 +130,7 @@ export function StadiumMap({ stadiums, tiles }: { stadiums: MapStadium[]; tiles:
         <button type="button" className="map-card-select" disabled={!ready || stadium.latitude === null || stadium.longitude === null} aria-pressed={selected === stadium.slug} onClick={() => selectStadium(stadium)}><span className="map-card-name">{stadium.name}</span><span>{stadium.location}</span><span>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}{stadium.isSpecial ? " · Viaje especial" : ""}</span>{(stadium.latitude === null || stadium.longitude === null) && <span>Sin coordenadas</span>}</button>
         <a className="map-card-history" href={`/stadiums/${stadium.slug}`}>Ver historial del estadio</a>
       </li>)}</ul>
-    <p className="map-attribution">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>{tiles.attributionUrl !== "https://www.openstreetmap.org/copyright" && <> · <a href={tiles.attributionUrl}>{tiles.attributionText}</a></>}</p>
+    <p className="map-attribution"><a href="https://openfreemap.org/">OpenFreeMap</a> · © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a></p>
     </div>
     <p role="status">{message}</p>
   </section>;

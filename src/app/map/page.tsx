@@ -5,7 +5,7 @@ import { StadiumMap, type MapStadium } from "@/components/stadium-map";
 import { getVisitedStadiums } from "@/db/public-archive";
 import { crestMediaPath } from "@/lib/crest-key";
 import { formatLocation } from "@/lib/geography";
-import { mapTileConfig } from "@/server/map-config";
+import { mapConfig } from "@/server/map-config";
 
 export const metadata: Metadata = { title: "Mapa" };
 
@@ -13,13 +13,13 @@ export default async function MapPage() {
   const stadiums = await getVisitedStadiums();
   const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
   const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
-  const tiles = mapTileConfig();
+  const config = mapConfig();
   return <div className="page-content map-page">
     <header className="page-heading"><h1>Mapa</h1></header>
     <p className="map-coverage">Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
     <a href="#stadium-list" className="inline-link">Ir a la lista de estadios</a>
     <noscript><p>El mapa interactivo necesita JavaScript. Puedes consultar la cobertura y los enlaces de la lista de estadios.</p></noscript>
-    {tiles ? <StadiumMap stadiums={mapStadiums} tiles={tiles} /> : <p className="map-section">El mapa no está disponible. Puedes usar la lista de estadios.</p>}
+    {config ? <StadiumMap stadiums={mapStadiums} config={config} /> : <p className="map-section">El mapa no está disponible. Puedes usar la lista de estadios.</p>}
     {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
     {!stadiums.length && <EmptyState eyebrow="Las chinchetas" title="Todavía no hay estadios" description="El mapa espera tus visitas." message="Todavía no hay estadios visitados publicados." />}
     <section id="stadium-list" aria-labelledby="stadium-list-title">

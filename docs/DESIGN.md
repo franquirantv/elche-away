@@ -6,6 +6,8 @@ Lead with **Elche Away** and the primary tagline **“Donde tú vayas.”** in S
 
 Trip cards prioritize opponent, score or “Result unknown,” date/season, then venue. Details show fixture designation, competition, geography, notes and a linked stadium. Stadium cards emphasize place and visit count; details list every visit. Special matches get a quiet accent and text label; avoid badges/achievement systems. Photos are a later enhancement, never required for a balanced layout.
 
+Owner-approved MAP-01 cartography (2026-10-24): use OpenFreeMap Liberty with OSM/OpenMapTiles data. Keep streets, buildings and stadium geometry visible as the user zooms in; preserve the existing marker and card behavior. The custom local political/terrain experiments are parked.
+
 ## Relationship to the physical map
 
 Use Elche-inspired green and white, charcoal text and restrained warm cork-toned accents. Travel references, stadium pins and a subtle paper/cork texture can connect the archive with the physical object. Avoid literal cork decoration behind dense content, excessive animation and reliance on a club crest or photography that has not been supplied/cleared. Clearly identify it as a personal fan archive, not an official Elche CF product. Core branding and layout must work without the Elche CF crest or any other copyrighted asset. Optional club crests can support fixture/stadium content when supplied; missing crests use accessible text/initials, and decorative images do not repeat adjacent club-name announcements.
