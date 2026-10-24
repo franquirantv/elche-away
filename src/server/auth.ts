@@ -19,7 +19,9 @@ export function getAuth() {
 
 export async function getVerifiedSession() {
   try {
-    const { data, error } = await getAuth().getSession({ query: { disableCookieCache: "true" } });
+    // Rendering cannot write cookies. Renewal belongs to proxy.ts; this lookup
+    // must still check the live session so revocation is never hidden by cache.
+    const { data, error } = await getAuth().getSession({ query: { disableCookieCache: "true", disableRefresh: "true" } });
     if (error) throw new AccessDenied();
     if (!data?.session || !data.user) return null;
     const expiresAt = new Date(data.session.expiresAt).getTime();

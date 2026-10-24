@@ -17,7 +17,9 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ### ADM-01 · Diagnosticar y corregir la pérdida de sesión
 
-**P0 · Bug/fix.** El propietario comunica pérdidas frecuentes de sesión al salir del panel y navegar por la web; la causa todavía no está identificada.
+**P0 · Bug/fix.** El propietario comunica pérdidas frecuentes de sesión al salir del panel y navegar por la web; la causa en el entorno afectado debe contrastarse con el diagnóstico reproducido abajo.
+
+**Seguimiento (2026-10-24):** reproducida una denegación falsa al renovar cookies de una sesión válida con el SDK instalado; corrección preparada en `fix/admin-session-persistence`. Se separan renovación en el proxy y verificación sin renovación durante el renderizado, conservando la consulta de sesión real. No se cambia la duración configurada. Diagnóstico en [ARCHITECTURE](ARCHITECTURE.md#authentication-and-authorization) y comprobación de al menos tres horas reales pendiente en [README](../README.md#acceso-del-propietario-con-google-milestone-3). Pendiente de CI, revisión de Preview, aceptación manual e integración; no se considera cerrado.
 
 - **Objetivo:** mantener una sesión razonablemente persistente, con un objetivo inicial de al menos tres horas de navegación normal sin pedir otro login.
 - **Valor:** eliminar interrupciones en la gestión del archivo y recuperar confianza en el acceso.

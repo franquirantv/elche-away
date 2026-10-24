@@ -79,6 +79,8 @@ En las pestañas de referencias de `/admin` puedes crear, editar y eliminar club
 
 Aceptación manual del Milestone 3 completada por el propietario el 2026-10-18 en development y testing: login con Google, acceso al admin, persistencia tras recargar y logout.
 
+**ADM-01 — comprobación de persistencia pendiente:** en el Preview revisado o en development/testing aislados, iniciar sesión con Google y alternar admin → inicio/viajes/estadios/mapa → admin durante al menos tres horas, incluyendo recargas y una segunda pestaña. Comprobar también un regreso tras más de cinco minutos fuera del admin, logout desde una pestaña y rechazo del acceso al recargar la otra. Anotar entorno, navegador, hora de login/fallo y si aparece login o «Acceso restringido», sin copiar cookies ni tokens. Si se inspeccionan cookies, registrar solo presencia, caducidad y atributos; contrastar la caducidad real con la de la sesión gestionada por Neon. Las pruebas automáticas reproducen la renovación y usan una sesión sintética de más de tres horas; no sustituyen esta comprobación temporal real. La corrección separa renovación en el proxy de verificación sin renovación durante el renderizado; no amplía duraciones ni modifica configuración remota. Las páginas públicas siguen funcionando sin Auth y no renuevan la sesión mientras se permanece en ellas.
+
 Neon gestiona sus tablas de Auth; no las migres con Drizzle ni las cargues con el seed. Para producción habrá que configurar OAuth/dominio propios posteriormente; no está configurada por este milestone.
 
 ## Partidos y asistencia (Milestone 4a)
