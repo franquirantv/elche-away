@@ -4,7 +4,7 @@
 
 ## Stack instalado
 
-Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
+Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). El mapa combina Leaflet con MapLibre GL JS y el estilo Liberty de OpenFreeMap, basado en OpenStreetMap. npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
 PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
 
@@ -342,18 +342,20 @@ Verificación de la rama 4d (2026-10-18): Node 22.23.3; lint y typecheck correct
 
 ## Mapa (Milestone 5)
 
-Leaflet con tiles estándar de OpenStreetMap aprobado por el propietario el 2026-10-18, coste 0 €, sin SLA. Consulta la decisión y [política de tiles](https://operations.osmfoundation.org/policies/tiles/) en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; caché y Referer del navegador; sin precarga, descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. Un carrusel superpuesto conecta tarjetas y pines.
+Liberty de OpenFreeMap, basado en OpenStreetMap, elegido por el propietario el 2026-10-24 en MAP-01, coste 0 €, sin SLA. Sustituye las teselas raster estándar elegidas inicialmente en Milestone 5. Consulta la decisión en [ARCHITECTURE](docs/ARCHITECTURE.md#map-comparison-and-recommendation). Atribución siempre visible; sin descargas masivas ni modo offline. El mapa se carga directamente al entrar, con un encuadre fijo de la España peninsular independiente de los estadios. Un carrusel superpuesto conecta tarjetas y pines.
 
 Configuración opcional del servidor (pública, sin secretos), leída en cada petición:
 
 | Variable | Valor predeterminado |
 | --- | --- |
-| `MAP_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
-| `MAP_TILE_ATTRIBUTION_TEXT` | `OpenStreetMap contributors` |
-| `MAP_TILE_ATTRIBUTION_URL` | `https://www.openstreetmap.org/copyright` |
-| `MAP_TILE_MAX_ZOOM` | `19` (entero entre 1 y 19) |
+| `MAP_STYLE_URL` | `https://tiles.openfreemap.org/styles/liberty` |
+| `MAP_MAX_ZOOM` | `19` (entero entre 1 y 19) |
 
-La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución debe enlazar a HTTPS. Configuración inválida desactiva el mapa y conserva la lista. Para cambiar proveedor, revisar condiciones/coste y configurar URL, atribución y zoom sin cambiar el componente. Reiniciar el servidor local tras editar `.env.local`.
+Liberty de OpenFreeMap es la base elegida por el propietario. Conserva calles, edificios y estadios al ampliar. Leaflet mantiene los pines, tarjetas y controles; MapLibre GL JS dibuja la capa vectorial mediante su adaptador oficial. No requiere cuenta ni clave. La atribución visible incluye OpenFreeMap, OpenMapTiles y OpenStreetMap. La instancia pública es gratuita, sin garantía de disponibilidad; ver [condiciones y comparación](docs/MAP_STYLE_OPTIONS.md).
+
+La URL del estilo debe usar HTTPS sin usuario, contraseña, query ni fragmento; nunca introducir claves. Los estilos personalizados deben usar las mismas fuentes OSM/OpenMapTiles y mantener sus atribuciones. Configuración inválida desactiva el mapa y conserva la lista. Las antiguas variables `MAP_TILE_URL`, `MAP_TILE_ATTRIBUTION_TEXT`, `MAP_TILE_ATTRIBUTION_URL` y `MAP_TILE_MAX_ZOOM` dejan de utilizarse; pueden retirarse del entorno. Sin nuevas variables se usa Liberty aunque sigan presentes las antiguas. Reiniciar el servidor local tras editar `.env.local`. No se ha cambiado configuración de Vercel ni desplegado.
+
+El mapa vectorial necesita WebGL. Si no está disponible o falla el proveedor, se muestra un aviso y siguen disponibles las tarjetas, los historiales y la lista de estadios; no se cambia automáticamente de proveedor.
 
 ### Aceptación manual en escritorio y móvil
 
@@ -361,8 +363,8 @@ La URL de tiles debe usar HTTPS y contener `{z}`, `{x}`, `{y}`. La atribución d
 2. En `/admin`, editar estadios: indicar ambas coordenadas reales conocidas, guardar y recargar `/map`. No inventar coordenadas históricas; se pueden usar referencias sintéticas en un entorno aislado. Dejar otro estadio visitado sin coordenadas. Comprobar cobertura y su entrada «Sin coordenadas».
 3. Al entrar debe verse el mapa grande encuadrando toda la península, incluso con un solo estadio o ninguno con coordenadas. Un marcador por estadio aunque tenga varias asistencias; no aparecen estadios sin asistencias. Las islas se exploran desplazando el mapa o eligiendo su tarjeta.
 4. En escritorio, pulsar una tarjeta: debe acercarse suavemente a su estadio, abrir información y marcar su tarjeta. Pulsar otro pin: debe seleccionar y llevar su tarjeta a la vista sin desplazar la página. Comprobar nombre, localidad, visitas y enlace «Ver historial del estadio». Probar Tab, Enter, zoom y foco visible. En móvil (390 px y dispositivo real), recorrer horizontalmente las tarjetas sin arrastrar el mapa, pulsar tarjeta y pin, ampliar con dos dedos, girar orientación y usar «Pausar interacción» para desplazar la página. La rueda de escritorio desplaza la página. No debe haber desbordamiento horizontal de la página; la atribución no queda cubierta. Con movimiento reducido, los cambios de selección no deben animarse.
-5. Bloquear `*tile.openstreetmap.org*` en las herramientas de red y recargar `/map`: debe aparecer el aviso de fallo y los enlaces de tarjetas y lista deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
-6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, comprobar HTTPS y Referer en los tiles; sin JavaScript no se solicitan tiles. La atribución permanece visible en la esquina superior derecha del mapa a cualquier zoom, fuera del carrusel.
+5. Bloquear `*tiles.openfreemap.org*` en las herramientas de red y recargar `/map`: debe aparecer el aviso de fallo y los enlaces de tarjetas y lista deben seguir funcionando. Quitar el bloqueo y recargar para reintentar. No ejecutar barridos automatizados de tiles reales.
+6. Desactivar JavaScript y recargar: lista, cobertura y enlaces siguen disponibles. En red, comprobar solicitudes HTTPS al estilo y las teselas de OpenFreeMap; sin JavaScript no se solicitan estos recursos. La atribución permanece visible en la esquina superior derecha del mapa a cualquier zoom, fuera del carrusel.
 7. Borrar ambas coordenadas y guardar; recargar y comprobar que desaparece solo el marcador. Probar coordenada incompleta o fuera de rango: rechazo del servidor. Con usuario ajeno o sin sesión no se puede editar. Si no hay estadios visitados se muestra el estado vacío.
 
 La aceptación visual/táctil y el fallo real de tiles requieren estas comprobaciones del propietario; las pruebas HTTP no descargan tiles. No hay cambios de esquema ni migraciones en este milestone.
@@ -434,3 +436,7 @@ Verificación del preflight Vercel (2026-10-20): lint y tipos correctos; suite 6
 La lista del preflight incluye también los cuatro metadatos adicionales observados en el build real de Vercel (2026-10-20); la regresión reproduce sus 19 nombres con valores sintéticos y mantiene el rechazo de secretos públicos. Build Command habitual: `npm run release:check && npm run build`; retirar la impresión temporal de nombres después del diagnóstico.
 
 Verificación con los nombres del build real (2026-10-20): lint y tipos correctos; suite 67/67 sin omisiones y base temporal eliminada; build Webpack correcto. La prueba reproduce los 19 nombres públicos observados, incluidos los cuatro omitidos en la primera corrección; no usa credenciales reales. Resultado del redespliegue pendiente de comprobar en Vercel.
+
+## Comparador de estilos sobre OpenStreetMap
+
+Con `npm run dev`, abre `/map-style-previews/index.html`: siete estilos alternativos y OSM estándar, con mapa interactivo y previews comparables de España y Mestalla. OpenFreeMap se puede probar sin cuenta ni clave; las opciones de Stadia funcionan sin clave en localhost y requieren configuración y respetar su cuota gratuita al publicar. El visor de investigación carga MapLibre desde un CDN versionado; no sustituye Leaflet en el mapa público. Condiciones, fuentes y evaluación: [MAP_STYLE_OPTIONS](docs/MAP_STYLE_OPTIONS.md).
