@@ -119,7 +119,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ### VIS-01 · Definir una dirección de diario de exploración futbolística
 
-**P1 · Cambio estructural de UX (diseño).** Orienta el rediseño antes de extender estilos a toda la web.
+**P1 · Cambio estructural de UX (diseño).** Propuesta implementada en `feature/vis-01-vis-02`, pendiente de revisión visual e integración (ver [DESIGN](DESIGN.md#vis-0102--diario-de-exploración)). Orienta el rediseño antes de extender estilos a toda la web.
 
 - **Objetivo:** evolucionar del aspecto corporativo hacia una experiencia más lúdica, visual y personal.
 - **Valor:** expresar la historia del propietario y conectar el archivo digital con el mapa físico.
@@ -128,7 +128,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ### VIS-02 · Añadir animaciones y microinteracciones de exploración
 
-**P3 · Polish/idea futura.** Mejora la sensación de respuesta después de estabilizar la navegación.
+**P3 · Polish.** Implementado en `feature/vis-01-vis-02`, pendiente de validación en Preview e integración. Mejora la sensación de respuesta después de estabilizar la navegación.
 
 - **Objetivo:** acompañar selección, apertura de paneles y descubrimiento de lugares con movimiento útil.
 - **Valor:** hacer más agradable y comprensible la transición entre contexto y detalle.
