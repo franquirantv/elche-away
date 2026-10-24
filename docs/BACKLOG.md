@@ -35,7 +35,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ## Experiencia pública centrada en el mapa
 
-**Decisiones UX-01/02/03 aceptadas (2026-10-24):** mapa como portada, paneles con URLs compartibles y páginas completas conservadas, panel inferior ampliable en móvil y lateral en escritorio. Implementación y verificación local en `feature/map-experience` completadas; pendientes CI, revisión de Preview e integración. El contrato y los recorridos de aceptación están en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). No se dan estos items por cerrados antes de esa revisión.
+**Decisiones UX-01/02/03 aceptadas (2026-10-24):** aplicación pública de mapa a pantalla completa, sin cabecera, navbar, footer ni contenido fuera del mapa; controles flotantes de exploración, zoom, desplazamiento y vuelta a la península. Paneles con URLs compartibles, inferior ampliable en móvil y lateral en escritorio. Los enlaces públicos antiguos abren el contenido dentro del mapa; el admin conserva su formato de página. Implementación y verificación local en `feature/map-experience` completadas; pendientes CI, revisión de Preview e integración. El contrato y los recorridos de aceptación están en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). No se dan estos items por cerrados antes de esa revisión.
 
 ### UX-01 · Definir la vista principal y la navegación sobre el mapa
 

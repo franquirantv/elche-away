@@ -62,8 +62,8 @@ after(async () => {
 
 const pages = [
   { path: "/", label: "Mapa", title: /Donde tú vayas\./ },
-  { path: "/trips", label: "Viajes", title: /<h1>Viajes<\/h1>/ },
-  { path: "/stadiums", label: "Estadios", title: /<h1>Estadios<\/h1>/ },
+  { path: "/trips", label: "Viajes", title: /id="explorer-panel-title"[^>]*>Viajes<\/h2>/ },
+  { path: "/stadiums", label: "Estadios", title: /id="explorer-panel-title"[^>]*>Estadios visitados<\/h2>/ },
   { path: "/map", label: "Mapa", title: /Donde tú vayas\./ },
 ];
 
@@ -77,11 +77,16 @@ for (const { path, label, title } of pages) {
     assert.match(html, /<main[^>]+id="main-content"/);
     assert.match(html, /href="#main-content"/);
     assert.match(html, /Sin vinculación oficial con el Elche CF/);
-    const navigation = html.match(/<nav\b[^>]*>[\s\S]*?<\/nav>/)?.[0];
-    assert.ok(navigation, "Primary navigation is server-rendered");
-    for (const href of ["/", "/?view=trips", "/?view=stadiums", "/?view=summary"]) assert.ok(navigation.includes(`href="${href}"`));
-    assert.match(navigation, new RegExp(`aria-current="page"[^>]*>${label}</a>`));
-    assert.equal((navigation.match(/aria-current="page"/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /class="site-header"|class="site-footer"|class="main-nav"/);
+    assert.match(html, /class="map-app"/);
+    assert.match(html, /aria-label="Explorar el archivo"/);
+    for (const href of ["/?view=trips", "/?view=stadiums", "/?view=summary"]) assert.ok(html.includes(`href="${href}"`));
+    assert.match(html, /Volver a la vista inicial de la península ibérica/);
+    assert.match(html, /aria-label="Mover al norte"/);
+    const active = html.match(/<a\b[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+    assert.equal(active.length, path === "/trips" || path === "/stadiums" ? 1 : 0);
+    const selected = active[0];
+    if (selected) assert.ok(selected.includes(`${label}</a>`));
   });
 }
 
@@ -112,7 +117,7 @@ test("public details and stadium visits come from attendance only", async () => 
     assert.match(cupHtml, /Un partido especial/);
     const ground = await fetch(`${origin}/stadiums/estadio-del-corcho-ejemplo`);
     assert.equal(ground.status, 200);
-    assert.match(await ground.text(), /2<!-- --> <!-- -->visitas en el archivo|2 visitas en el archivo/);
+    assert.match((await ground.text()).replace(/<!-- -->/g, ""), /2 visitas en el archivo/);
     const notVisited = await fetch(`${origin}/stadiums/estadio-no-visitado-ejemplo`);
     assert.equal(notVisited.status, 404);
     assert.equal((await fetch(`${origin}/trips/nonexistent-trip`)).status, 404);
@@ -141,7 +146,11 @@ test("a fixture correction appears on the next request without changing its URL"
 test("Google login and account bootstrap do not expose admin data to unauthenticated users", async () => {
   const login = await fetch(`${origin}/auth/sign-in`);
   assert.equal(login.status, 200);
-  assert.match(await login.text(), /Continuar con Google/);
+  const loginHtml = await login.text();
+  assert.match(loginHtml, /Continuar con Google/);
+  assert.match(loginHtml, /class="site-header"/);
+  assert.match(loginHtml, /class="site-footer"/);
+  assert.doesNotMatch(loginHtml, /class="map-app"/);
   const response = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([302, 307].includes(response.status));
   assert.match(response.headers.get("location") ?? "", /auth\/sign-in/);
@@ -188,6 +197,9 @@ test("configured owner can read all reference categories through the native sess
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.match(html, /Crear referencia/);
+    assert.match(html, /class="site-header"/);
+    assert.match(html, /class="site-footer"/);
+    assert.doesNotMatch(html, /class="map-app"/);
   }
 });
 
@@ -508,11 +520,11 @@ test("map panels preserve attendance-only links and coordinate coverage without 
   assert.match(html, /Todavía no hay coordenadas/);
   assert.match(html, /class="stadium-map"/);
   assert.match(html, /Ampliar panel/);
-  assert.match(html, /Ver página completa de estadios/);
+  assert.doesNotMatch(html, /Ver página completa|Lista sin mapa/);
   assert.match(html, /El mapa interactivo necesita JavaScript/);
 });
 
-test("shared map details survive direct requests and retain complete-page alternatives", async () => {
+test("shared map details survive direct requests and legacy URLs open their map panel", async () => {
   const { db, pool } = createDatabase(localDatabaseUrl("testing"));
   try {
     const trips = await listTrips(db);
@@ -521,13 +533,19 @@ test("shared map details survive direct requests and retain complete-page altern
       assert.equal(response.status, 200);
       const html = await response.text();
       assert.match(html, /Recuerdos del viaje/);
-      assert.ok(html.includes(`href="/trips/${trip.slug}"`));
+      assert.doesNotMatch(html, /Ver página completa|Lista sin mapa/);
+      const legacy = await fetch(`${origin}/trips/${trip.slug}`, { redirect: "manual" });
+      assert.equal(legacy.status, 307);
+      assert.equal(new URL(legacy.headers.get("location")!, origin).searchParams.get("trip"), trip.slug);
       assert.match(html, /Cerrar panel y volver al mapa/);
       assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
     }
     const stadium = await (await fetch(`${origin}/?stadium=estadio-del-corcho-ejemplo`)).text();
     assert.match(stadium, /Sin coordenadas: puedes consultar sus visitas/);
-    assert.match(stadium, /href="\/stadiums\/estadio-del-corcho-ejemplo"/);
+    assert.doesNotMatch(stadium, /Ver página completa/);
+    const legacyStadium = await fetch(`${origin}/stadiums/estadio-del-corcho-ejemplo`, { redirect: "manual" });
+    assert.equal(legacyStadium.status, 307);
+    assert.equal(new URL(legacyStadium.headers.get("location")!, origin).searchParams.get("stadium"), "estadio-del-corcho-ejemplo");
     for (const trip of trips.filter((trip) => trip.stadiumId === fixtureIds.ground)) assert.ok(stadium.includes(`href="/?trip=${trip.slug}"`));
     for (const query of ["stadium=estadio-no-visitado-ejemplo", `trip=${fixtureIds.unattendedMatch}`, "trip=missing", "view=unknown", "trip=a&stadium=b", "view=trips&view=summary"]) {
       const response = await fetch(`${origin}/?${query}`);

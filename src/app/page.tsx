@@ -33,7 +33,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <p>{formatLocation(stadium.city, stadium.provinceCode)}</p>
       <p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"} en el archivo.</p>
       {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas: puedes consultar sus visitas aunque no aparezca en el mapa.</p>}
-      <Link className="text-link" href={`/stadiums/${stadium.slug}`}>Ver página completa del estadio</Link>
       <TripList trips={trips} onMap />
     </>;
   } else if (selection.kind === "trip") {
@@ -48,7 +47,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <p>{matchDate(trip.playedOn)}</p>
       {trip.isSpecial && <p className="special-label">Un partido especial</p>}
       {(!stadium || stadium.latitude === null || stadium.longitude === null) && <p>Este viaje no tiene una ubicación disponible en el mapa.</p>}
-      <Link className="text-link" href={`/trips/${trip.slug}`}>Ver página completa del viaje</Link>
       <TripFacts trip={trip} onMap />
     </>;
   } else if (selection.kind === "view") {
@@ -56,10 +54,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     if (selection.view === "trips") {
       title = "Viajes";
       const trips = await getTrips();
-      panel = <><p>Todos los viajes publicados, también los que todavía no tienen ubicación.</p><Link className="text-link" href="/trips">Ver página completa de viajes</Link>{trips.length ? <TripList trips={trips} onMap /> : <p>Todavía no hay viajes publicados.</p>}</>;
+      panel = <><p>Todos los viajes publicados, también los que todavía no tienen ubicación.</p>{trips.length ? <TripList trips={trips} onMap /> : <p>Todavía no hay viajes publicados.</p>}</>;
     } else if (selection.view === "stadiums") {
       title = "Estadios visitados";
-      panel = <><Link className="text-link" href="/stadiums">Ver página completa de estadios</Link>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<ul className="explorer-stadiums">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
+      panel = <>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<ul className="explorer-stadiums">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
         <h3><Link href={mapDetailHref("stadium", stadium.slug)} scroll={false}>{stadium.name}</Link></h3><p>{formatLocation(stadium.city, stadium.provinceCode)}</p><p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</p>
         {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas</p>}
       </li>)}</ul></>;
@@ -72,12 +70,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     }
   }
   const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
-  return <>
-    <MapExplorer stadiums={mapStadiums} tiles={mapTileConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title}>{panel}</MapExplorer>
-    <div className="explorer-coverage"><p>Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
-      {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
-      {!stadiums.length && <p>Todavía no hay estadios visitados publicados. El mapa espera tus viajes.</p>}
-      <Link href="/?view=stadiums" scroll={false} className="inline-link">Lista de estadios sobre el mapa</Link> · <Link href="/stadiums" className="inline-link">Lista sin mapa</Link>
-    </div>
+  const information = <>
+    <p>Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
+    {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
+    {!stadiums.length && <p>Todavía no hay estadios visitados publicados. El mapa espera tus viajes.</p>}
+    <Link href="/?view=stadiums" scroll={false} className="inline-link">Consultar estadios del archivo</Link>
   </>;
+  return <MapExplorer stadiums={mapStadiums} tiles={mapTileConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title} information={information}>{panel}</MapExplorer>;
 }

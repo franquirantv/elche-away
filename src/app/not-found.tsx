@@ -1,12 +1,10 @@
 import Link from "next/link";
+import { MapExplorer } from "@/components/map-explorer";
+import { mapTileConfig } from "@/server/map-config";
 
 export default function NotFound() {
-  return (
-    <div className="page-content page-heading">
-      <p className="eyebrow">404 / Fuera de ruta</p>
-      <h1>No encontramos esta página</h1>
-      <p className="lead">Puede que el enlace no sea correcto. El camino continúa desde el inicio.</p>
-      <Link href="/" className="button-link">Volver al inicio</Link>
-    </div>
-  );
+  return <MapExplorer stadiums={[]} tiles={mapTileConfig()} selectedSlug={null} panelKey="not-found" title="No encontramos esta página" information={<p>Este enlace no corresponde a un recurso público del archivo.</p>}>
+    <p>Puede que el enlace no sea correcto o que el viaje no esté publicado. El camino continúa desde el mapa.</p>
+    <Link href="/" className="button-link">Volver al inicio</Link>
+  </MapExplorer>;
 }

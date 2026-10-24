@@ -3,8 +3,10 @@ import { requireCondition } from "./policy";
 export async function smoke(origin: string, bypass?: string) {
   const base = new URL(origin);
   requireCondition(base.protocol === "https:" && base.origin === origin && !base.username && !base.password, "SMOKE_ORIGIN");
-  for (const [path, status, marker] of [["/", 200, "Donde tú"], ["/trips", 200, "Viajes"],
-    ["/stadiums", 200, "Estadios"], ["/map", 200, "Mapa"], ["/__cd_missing_page__", 404, "No encontramos esta página"]] as const) {
+  // Probe canonical map states directly: legacy archive paths now redirect.
+  // Keep redirect refusal so deployment bypass credentials never follow a URL.
+  for (const [path, status, marker] of [["/", 200, "Donde tú"], ["/?view=trips", 200, "Viajes"],
+    ["/?view=stadiums", 200, "Estadios"], ["/?view=summary", 200, "El archivo en cifras"], ["/__cd_missing_page__", 404, "No encontramos esta página"]] as const) {
     let passed = false;
     for (let attempt = 0; attempt < 3 && !passed; attempt++) {
       try {
