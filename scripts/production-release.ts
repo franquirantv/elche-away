@@ -2,11 +2,12 @@
 import { appendFile, readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { Pool, type PoolClient } from "pg";
-import { api, array, number, object, string, waitFor, type JsonObject } from "./cd/http";
+import { api, array, cdFailureMessage, number, object, string, waitFor, type JsonObject } from "./cd/http";
 import { migrateProduction, validateMigrationPolicy, verifyHistory } from "./cd/migrations";
-import { CdError, directProductionUrl, recoveryDeletions, releaseInOrder, requireCondition, type RecoveryRecord } from "./cd/policy";
+import { directProductionUrl, recoveryDeletions, releaseInOrder, requireCondition, type RecoveryRecord } from "./cd/policy";
 import { smoke } from "./cd/smoke";
 import { assertFreeUsage, assertRecoveryCapacity } from "./cd/budget";
+import { verifyVercelProject } from "./cd/vercel";
 
 function env(key: string) {
   const value = process.env[key];
@@ -32,9 +33,9 @@ async function main() {
   const teamId = env("VERCEL_TEAM_ID");
   const vercelProjectId = env("VERCEL_PROJECT_ID");
   requireCondition(/^team_[a-zA-Z0-9]+$/.test(teamId) && /^prj_[a-zA-Z0-9]+$/.test(vercelProjectId), "VERCEL_IDS");
-  const github = api(`https://api.github.com/repos/${repo}`, env("GITHUB_TOKEN"));
-  const neon = api(`https://console.neon.tech/api/v2/projects/${projectId}`, env("NEON_API_KEY"));
-  const vercel = api("https://api.vercel.com", env("VERCEL_TOKEN"), `teamId=${teamId}`);
+  const github = api("github", `https://api.github.com/repos/${repo}`, env("GITHUB_TOKEN"));
+  const neon = api("neon", `https://console.neon.tech/api/v2/projects/${projectId}`, env("NEON_API_KEY"));
+  const vercel = api("vercel", "https://api.vercel.com", env("VERCEL_TOKEN"), `teamId=${teamId}`);
   const summary = async (message: string) => {
     console.log(message);
     if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n\n`);
@@ -49,7 +50,7 @@ async function main() {
   pool.on("error", () => console.error("CD database connection interrupted."));
   const status = async (state: string) => {
     requireCondition(registryId !== undefined, "REGISTRY_MISSING");
-    await github(`/deployments/${registryId}/statuses`, "POST", {
+    await github("deployment.status", `/deployments/${registryId}/statuses`, "POST", {
       state, auto_inactive: false, environment: registryEnvironment,
       log_url: `https://github.com/${repo}/actions/runs/${runId}`,
       description: `Automatic release: ${stage}`,
@@ -57,45 +58,35 @@ async function main() {
     });
   };
   const branches = async () => {
-    const response = object(await neon("/branches?limit=100"));
+    const response = object(await neon("branches.list", "/branches?limit=100"));
     requireCondition(!object(response.pagination ?? {}).cursor, "NEON_PAGINATION_UNEXPECTED");
     return array(response.branches).map(object);
   };
-  const branchReady = (id: string) => waitFor(async () => object(object(await neon(`/branches/${id}`)).branch), (branch) => {
+  const branchReady = (id: string) => waitFor({ provider: "neon", operation: "branch.read" }, async () => object(object(await neon("branch.read", `/branches/${id}`)).branch), (branch) => {
     requireCondition(!["broken", "deleting"].includes(String(branch.current_state)), "BRANCH_FAILED");
     return branch.current_state === "ready" && !branch.pending_state;
   });
   const deleteBranch = async (id: string) => {
     requireCondition(id !== parentId, "PRODUCTION_DELETE_FORBIDDEN");
-    await neon(`/branches/${id}`, "DELETE");
-    await waitFor(branches, (items) => !items.some((item) => item.id === id));
+    await neon("branch.delete", `/branches/${id}`, "DELETE");
+    await waitFor({ provider: "neon", operation: "branches.list" }, branches, (items) => !items.some((item) => item.id === id));
   };
   let client: PoolClient | undefined;
   try {
     await releaseInOrder({
       preflight: async () => {
-        const ci = object(await github(`/actions/runs/${env("CI_RUN_ID")}`));
+        const ci = object(await github("ci.read", `/actions/runs/${env("CI_RUN_ID")}`));
         requireCondition(ci.event === "push" && ci.head_branch === "main" && ci.head_sha === sha
           && ci.conclusion === "success" && ci.path === ".github/workflows/ci.yml"
           && object(ci.head_repository).full_name === repo, "CI_PROVENANCE");
-        const tip = object(object(await github("/git/ref/heads/main")).object);
+        const tip = object(object(await github("main.read", "/git/ref/heads/main")).object);
         if (tip.sha !== sha) { await summary("Skipped superseded commit."); return false; }
         const configuration = object(JSON.parse(await readFile("vercel.json", "utf8")));
         requireCondition(object(object(configuration.git).deploymentEnabled).main === false, "GIT_AUTODEPLOY_ENABLED");
-        const team = object(await vercel(`/v2/teams/${teamId}`));
-        requireCondition(object(team.billing).plan === "hobby", "VERCEL_NOT_FREE");
-        vercelProject = object(await vercel(`/v9/projects/${vercelProjectId}`));
-        const link = object(vercelProject.link);
-        requireCondition(vercelProject.id === vercelProjectId && link.type === "github" && link.productionBranch === "main"
-          && link.org === repo.split("/")[0] && link.repo === repo.split("/")[1], "VERCEL_PROJECT_BINDING");
-        requireCondition(/^\d+$/.test(String(link.repoId)), "VERCEL_REPOSITORY_ID");
-        requireCondition(vercelProject.buildCommand === "npm run release:check && npm run build", "VERCEL_BUILD_COMMAND");
-        const active = object(await vercel(`/v6/deployments?projectId=${vercelProjectId}&target=production&limit=100`));
-        requireCondition(array(active.deployments).map(object).every((deployment) =>
-          ["READY", "ERROR", "CANCELED"].includes(String(deployment.state ?? deployment.readyState))), "REMOTE_DEPLOYMENT_ACTIVE");
-        const project = object(object(await neon("")).project);
+        vercelProject = await verifyVercelProject(vercel, vercelProjectId, repo);
+        const project = object(object(await neon("project.read", "")).project);
         assertFreeUsage(project);
-        const endpoints = array(object(await neon("/endpoints")).endpoints).map(object);
+        const endpoints = array(object(await neon("endpoints.list", "/endpoints")).endpoints).map(object);
         requireCondition(endpoints.some((endpoint) => endpoint.branch_id === parentId
           && endpoint.host === productionUrl.hostname && endpoint.type === "read_write"), "NEON_DATABASE_BINDING");
         // Persisted GitHub deployment payloads are the recovery registry, never logs/artifacts with rows.
@@ -103,7 +94,7 @@ async function main() {
         const allDeployments: JsonObject[] = [];
         for (let page = 1; ; page++) {
           requireCondition(page <= 100, "REGISTRY_TOO_LARGE");
-          const batch = array(await github(`/deployments?environment=${registryEnvironment}&per_page=100&page=${page}`)).map(object);
+          const batch = array(await github("deployments.list", `/deployments?environment=${registryEnvironment}&per_page=100&page=${page}`)).map(object);
           allDeployments.push(...batch);
           if (batch.length < 100) break;
         }
@@ -111,7 +102,7 @@ async function main() {
         for (const deployment of allDeployments) {
           const payload = object(deployment.payload);
           if (payload.owner !== "elche-away-cd-v1" || payload.projectId !== projectId || payload.parentId !== parentId) continue;
-          const statuses = array(await github(`/deployments/${number(deployment.id)}/statuses?per_page=1`)).map(object);
+          const statuses = array(await github("deployment.statuses", `/deployments/${number(deployment.id)}/statuses?per_page=1`)).map(object);
           const state = statuses.length ? string(statuses[0].state) : "unknown";
           // A killed runner may have left a remote mutation active. Do not overlap it.
           requireCondition(["success", "failure", "error"].includes(state), "UNFINISHED_RELEASE_RECONCILE");
@@ -142,20 +133,20 @@ async function main() {
       recovery: async () => {
         stage = "recovery";
         const recoveryName = `recovery/${runId}-${sha}`;
-        const result = object(await neon("/branches", "POST", { branch: { name: recoveryName, parent_id: parentId } }));
+        const result = object(await neon("branch.create", "/branches", "POST", { branch: { name: recoveryName, parent_id: parentId } }));
         const recoveryId = string(object(result.branch).id);
         const recovery = await branchReady(recoveryId);
         requireCondition(recovery.parent_id === parentId && recovery.name === recoveryName
           && /^[A-Fa-f0-9]+\/[A-Fa-f0-9]+$/.test(string(recovery.parent_lsn)), "RECOVERY_INVALID");
         await summary(`Recovery ${recoveryId}; parent ${parentId}; LSN ${string(recovery.parent_lsn)}; SHA ${sha}.`);
-        const deployment = object(await github("/deployments", "POST", {
+        const deployment = object(await github("deployment.create", "/deployments", "POST", {
           ref: sha, environment: registryEnvironment, auto_merge: false, required_contexts: [], production_environment: true,
           payload: { owner: "elche-away-cd-v1", projectId, parentId, recoveryId, recoveryName, runId },
         }));
         registryId = number(deployment.id);
         await status("in_progress");
         // Restore rehearsal: a disposable child proves the recovery can be opened and upgraded.
-        const trial = object(await neon("/branches", "POST", {
+        const trial = object(await neon("branch.create", "/branches", "POST", {
           branch: { name: `rehearsal/${runId}-${sha}`, parent_id: recoveryId },
           endpoints: [{ type: "read_write", autoscaling_limit_min_cu: 0.25, autoscaling_limit_max_cu: 0.25 }],
         }));
@@ -191,14 +182,14 @@ async function main() {
       deploy: async () => {
         stage = "deploy";
         const link = object(vercelProject.link);
-        const created = object(await vercel("/v13/deployments", "POST", {
+        const created = object(await vercel("deployment.create", "/v13/deployments", "POST", {
           name: string(vercelProject.name), project: vercelProjectId, target: "production",
           gitSource: { type: "github", repoId: String(link.repoId), ref: sha, sha },
           meta: { releaseSha: sha, releaseRunId: runId },
         }));
         const deploymentId = string(created.id);
         await summary(`Vercel deployment ${deploymentId}; SHA ${sha}.`);
-        const ready = await waitFor(async () => object(await vercel(`/v13/deployments/${deploymentId}`)), (value) => {
+        const ready = await waitFor({ provider: "vercel", operation: "deployment.read" }, async () => object(await vercel("deployment.read", `/v13/deployments/${deploymentId}`)), (value) => {
           requireCondition(!["ERROR", "CANCELED"].includes(String(value.readyState)), "DEPLOY_FAILED");
           return value.readyState === "READY";
         }, 900_000);
@@ -210,9 +201,9 @@ async function main() {
         stage = "smoke";
         await smoke(deploymentUrl, process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
         // The public domain must also point at this exact deployment, not a healthy old release.
-        const alias = object(await vercel(`/v4/aliases/${encodeURIComponent(new URL(publicOrigin).hostname)}`));
+        const alias = object(await vercel("alias.read", `/v4/aliases/${encodeURIComponent(new URL(publicOrigin).hostname)}`));
         requireCondition(alias.projectId === vercelProjectId, "PUBLIC_PROJECT_MISMATCH");
-        const publicDeployment = object(await vercel(`/v13/deployments/${string(alias.deploymentId)}`));
+        const publicDeployment = object(await vercel("deployment.read", `/v13/deployments/${string(alias.deploymentId)}`));
         requireCondition(object(publicDeployment.gitSource).sha === sha, "PUBLIC_SHA_MISMATCH");
         await smoke(publicOrigin);
       },
@@ -226,9 +217,9 @@ async function main() {
     if (registryId !== undefined) {
       try { await status("failure"); } catch { /* Unknown registry status also prevents deletion. */ }
     }
-    const code = error instanceof CdError && /^[A-Z0-9_]+$/.test(error.message) ? error.message : "UNCLASSIFIED";
+    const code = cdFailureMessage(error);
     await summary(`Release stopped at ${stage} [${code}]. No automatic SQL rollback. Preserve recovery and reconcile before retry.`);
-    throw new Error("RELEASE_STOPPED");
+    throw error; // The outer handler uses the same safe formatter, never the raw error.
   } finally {
     try {
       if (client) {
@@ -240,7 +231,7 @@ async function main() {
 
 main().catch((error: unknown) => {
   // Suppress raw database/provider/parser errors: they may include secrets or rows.
-  const code = error instanceof CdError && /^[A-Z0-9_]+$/.test(error.message) ? error.message : "RELEASE_STOPPED";
+  const code = cdFailureMessage(error);
   console.error(`Production CD failed [${code}]. Review docs/CD.md; no credentials were logged.`);
   process.exitCode = 1;
 });
