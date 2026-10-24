@@ -2,7 +2,15 @@
 
 Propuestas para la siguiente fase de Elche Away. Este documento organiza oportunidades; no autoriza implementación, no modifica el [ROADMAP](ROADMAP.md) ni asigna milestones, fechas o compromisos de entrega. Cada identificador permite extraer después una tarea independiente.
 
-La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge solo trabajo pendiente. La implementación de UX-01, UX-02 y UX-03 se describe en [MAP_EXPERIENCE](MAP_EXPERIENCE.md) y su integración se sigue en la [PR #7](https://github.com/franquirantv/elche-away/pull/7), con CI y revisión de Preview pendientes. Retirar un item implementado de este documento no implica que esté integrado o desplegado.
+La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge solo trabajo pendiente. Revisión completa realizada el 2026-10-25 contra el código de `main` y la rama `feature/vis-01-vis-02`.
+
+Trabajo implementado retirado de la lista de tareas:
+
+- **UX-01/02/03:** navegación y paneles públicos sobre el mapa, integrados en `main` mediante la [PR #9](https://github.com/franquirantv/elche-away/pull/9). Contrato y comprobaciones en [MAP_EXPERIENCE](MAP_EXPERIENCE.md).
+- **MAP-01:** comparación de estilos y elección e integración de OpenFreeMap Liberty, incluidas en `main` mediante la PR #9. Investigación en [MAP_STYLE_OPTIONS](MAP_STYLE_OPTIONS.md); dirección vigente en [DESIGN](DESIGN.md).
+- **VIS-01/02:** dirección de diario personal, tarjetas, paneles, transiciones y feedback de carga implementados en `feature/vis-01-vis-02`. Comprobaciones locales y límites en [DESIGN](DESIGN.md#vis-0102--diario-de-exploración). Pendientes CI, revisión de Preview e integración en `release/20261025`.
+
+La implementación no acredita por sí sola aceptación, integración o despliegue. La validación real de tres horas de sesión sigue abierta como ADM-01; no se repite el código de las correcciones ya integradas.
 
 [PRODUCT](PRODUCT.md) y [DESIGN](DESIGN.md) recogen la dirección vigente; [ARCHITECTURE](ARCHITECTURE.md) y [DATABASE](DATABASE.md), los límites técnicos y de datos. La preparación de lanzamiento mantiene su seguimiento en [RELEASE](RELEASE.md).
 
@@ -25,7 +33,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 - **Objetivo:** comprobar que la sesión permite al menos tres horas de navegación normal sin pedir otro login.
 - **Valor:** confirmar que las correcciones resuelven las interrupciones del propietario en el entorno afectado.
-- **Alcance aproximado:** aceptación manual de login → admin → páginas públicas → regreso al admin, con recargas, varias pestañas y duración real de al menos tres horas; verificar también logout y rechazo de accesos no autorizados. Registrar tiempos y evidencia sin secretos. Revisar CI y Preview de la corrección antes de integrar.
+- **Alcance aproximado:** aceptación manual de login → admin → páginas públicas → regreso al admin, con recargas, varias pestañas y duración real de al menos tres horas; verificar también logout y rechazo de accesos no autorizados. Registrar tiempos y evidencia sin secretos. La corrección ya está integrada en `main` mediante las PR #6 y #9; queda registrar la aceptación de duración real en el entorno afectado.
 - **Dependencias / decisiones pendientes:** concretar si el objetivo incluye inactividad y contrastar el comportamiento de Neon Auth en el entorno afectado. Abrir una corrección adicional solo si la validación reproduce un fallo; mantener autorización exacta por `ADMIN_USER_ID` y no prolongar una sesión cerrada explícitamente.
 
 ### ADM-02 · Retirar la exposición continua del identificador del propietario
@@ -38,15 +46,6 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Dependencias / decisiones pendientes:** decidir si hace falta una ayuda puntual de configuración/diagnóstico. Ocultar el dato no elimina ni modifica la autorización del servidor; no rediseñar el admin.
 
 ## Cartografía y visualización geográfica
-
-### MAP-01 · Investigar una cartografía más simple y visual
-
-**P1 · Cambio estructural de UX (investigación).** Elegir la base gráfica pronto evita diseñar paneles y marcadores sobre una estética que después se descarte.
-
-- **Objetivo:** comparar opciones de mapa menos cargadas y más afines al diario de exploración.
-- **Valor:** dar protagonismo a estadios y viajes y mejorar la legibilidad.
-- **Alcance aproximado:** comparar la base actual con estilos simplificados compatibles y, si aporta valor, alternativas vectoriales o ilustradas. Preparar muestras comparables de península, islas y ciudades autónomas, con marcadores y paneles; evaluar detalle, zoom, móvil, rendimiento, accesibilidad, atribución, licencias y disponibilidad.
-- **Dependencias / decisiones pendientes:** coordinar VIS-01 y la experiencia implementada en [MAP_EXPERIENCE](MAP_EXPERIENCE.md). La base aprobada es Leaflet + teselas estándar OSM con presupuesto de 0 €; no seleccionar proveedor, migrar motor ni contratar servicios en este item sin revisar condiciones y decisión del propietario. Distinguir un cambio de estilo de un cambio de tecnología.
 
 ### MAP-02 · Mostrar conexión punteada y distancia al estadio
 
@@ -64,7 +63,7 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** mantener accesibles todos los estadios al crecer la colección o aparecer sedes próximas.
 - **Valor:** evitar puntos ocultos y selecciones ambiguas.
 - **Alcance aproximado:** evaluar solapamientos en varios zooms y proponer agrupación, separación o selección mediante lista; definir apertura del grupo y conservación del estadio seleccionado y del enlace directo.
-- **Dependencias / decisiones pendientes:** volumen/densidad observados, MAP-01 y COL-01. Diferenciar grupos de estadios de recuentos de visitas: las visitas repetidas siguen compartiendo un único estadio. Evitar añadir clustering sin necesidad comprobada.
+- **Dependencias / decisiones pendientes:** volumen/densidad observados y COL-01; partir de Liberty ya integrado (MAP-01). Diferenciar grupos de estadios de recuentos de visitas: las visitas repetidas siguen compartiendo un único estadio. Evitar añadir clustering sin necesidad comprobada.
 
 ## Estadísticas personales y calidad de datos
 
@@ -113,27 +112,9 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Objetivo:** distinguir visitado, pendiente y seleccionado y transmitir progreso sin saturar el mapa.
 - **Valor:** facilitar la lectura y dar una sensación de colección personal.
 - **Alcance aproximado:** proponer iconos, etiquetas y estados accesibles, con recuentos de visitas donde ayuden; sincronizar marcador, card y panel. Mantener fallback cuando falten imágenes y no depender solo del color.
-- **Dependencias / decisiones pendientes:** COL-01, MAP-01 y VIS-01; revisar expresamente cualquier cambio de la regla actual de escudos (rival de las asistencias, nunca propietario del estadio). Para pendientes no inferir un escudo desde supuesta titularidad. No introducir cuentas públicas ni un sistema general de logros.
+- **Dependencias / decisiones pendientes:** COL-01; partir de Liberty (MAP-01) y de la dirección de diario implementada (VIS-01); revisar expresamente cualquier cambio de la regla actual de escudos (rival de las asistencias, nunca propietario del estadio). Para pendientes no inferir un escudo desde supuesta titularidad. No introducir cuentas públicas ni un sistema general de logros.
 
-## Dirección visual y recuerdos
-
-### VIS-01 · Definir una dirección de diario de exploración futbolística
-
-**P1 · Cambio estructural de UX (diseño).** Propuesta implementada en `feature/vis-01-vis-02`, pendiente de revisión visual e integración (ver [DESIGN](DESIGN.md#vis-0102--diario-de-exploración)). Orienta el rediseño antes de extender estilos a toda la web.
-
-- **Objetivo:** evolucionar del aspecto corporativo hacia una experiencia más lúdica, visual y personal.
-- **Valor:** expresar la historia del propietario y conectar el archivo digital con el mapa físico.
-- **Alcance aproximado:** preparar una propuesta visual acotada para mapa, card de viaje y panel de estadio: jerarquía, tipografía, color, texturas sutiles, lenguaje de colección y principios de animación. Mantener Elche Away, «Donde tú vayas.», textos en español e identidad de archivo personal.
-- **Dependencias / decisiones pendientes:** partir de la navegación y los paneles ya implementados y coordinar MAP-01; revisar la contención visual vigente en DESIGN antes de implementar. Acordar intensidad lúdica sin convertirla automáticamente en logros o gamificación compleja; asegurar legibilidad, rendimiento y movimiento reducido. No aplicar esta reestructuración al admin.
-
-### VIS-02 · Añadir animaciones y microinteracciones de exploración
-
-**P3 · Polish.** Implementado en `feature/vis-01-vis-02`, pendiente de validación en Preview e integración. Mejora la sensación de respuesta después de estabilizar la navegación.
-
-- **Objetivo:** acompañar selección, apertura de paneles y descubrimiento de lugares con movimiento útil.
-- **Valor:** hacer más agradable y comprensible la transición entre contexto y detalle.
-- **Alcance aproximado:** transiciones breves y consistentes, feedback de selección y progreso; comprobar interrupción de animaciones, interacción rápida, móviles modestos y alternativa con movimiento reducido.
-- **Dependencias / decisiones pendientes:** VIS-01 y evaluación de la navegación/paneles ya implementados. Acordar presupuesto de rendimiento; ninguna animación debe bloquear lectura o navegación ni ser la única portadora de información.
+## Recuerdos
 
 ### MEM-01 · Fotos y recuerdos por viaje
 
@@ -148,6 +129,6 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 Completar la **validación pendiente de ADM-01**, especialmente las tres horas reales de sesión. **ADM-02** sigue siendo una mejora pequeña e independiente de la interfaz de sesión.
 
-Con la base de navegación sobre el mapa implementada, el siguiente foco de producto es **MAP-01 + VIS-01**: comparar cartografías y acordar la dirección visual antes de extender estilos. La revisión de CI y Preview de UX-01/02/03 forma parte de la integración de la PR #7, no de una nueva tarea de implementación.
+La navegación sobre el mapa, la cartografía Liberty y la dirección visual con microinteracciones ya están implementadas. No volver a planificar UX-01/02/03, MAP-01 ni VIS-01/02 como trabajo de desarrollo pendiente. Para VIS-01/02 quedan CI y revisión de Preview antes de integrar la release.
 
-**GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ampliar el resumen existente; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos, animaciones y clustering no bloquean estas decisiones.
+**GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ampliar el resumen existente; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos y clustering siguen pendientes y no bloquean estas decisiones. Cualquier ampliación de las microinteracciones ya disponibles debe tener un alcance nuevo y concreto.
