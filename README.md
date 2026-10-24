@@ -246,6 +246,8 @@ Toda la interfaz pública vive dentro del mapa, que ocupa el viewport completo. 
 
 ## Scripts y pruebas
 
+Durante cada iteración se ejecutan únicamente las pruebas o comprobaciones visuales/de interacción que afecten a la funcionalidad modificada. No se lanzan por rutina la suite completa, el build, lint global ni typecheck. La regla universal del proyecto está en [AGENTS](AGENTS.md#efficient-workflow-and-checks). Antes de mergear cualquier PR, también hacia una rama de release, se comprueba que el último commit pasa todos los checks en CI (`lint`, `typecheck`, `test`, `build`) y se revisa el Preview. Los errores se corrigen antes del merge; no se duplican localmente checks que ya hayan pasado en CI.
+
 | Comando | Función |
 | --- | --- |
 | `npm run dev` | Desarrollo con recarga automática en development. |
