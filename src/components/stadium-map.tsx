@@ -41,12 +41,12 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
         for (const stadium of stadiums) {
           if (stadium.latitude === null || stadium.longitude === null) continue;
           const marker = L.marker([stadium.latitude, stadium.longitude], {
-            title: stadium.crestClubName ? `${stadium.name} · Rival de las visitas: ${stadium.crestClubName}` : stadium.name,
+            title: `${stadium.name} · ${stadium.visits ? `Visitado · ${stadium.visits} visitas` : "Pendiente de visitar"}` + (stadium.crestClubName ? ` · Rival de las visitas: ${stadium.crestClubName}` : ""),
             alt: stadium.name,
-            icon: L.divIcon({ className: "stadium-marker", html: createStadiumBadge(stadium.crestPath), iconSize: [48, 56], iconAnchor: [24, 56] }),
+            icon: L.divIcon({ className: `stadium-marker ${stadium.visits ? "is-visited" : "is-pending"}`, html: createStadiumBadge(stadium.crestPath, stadium.visits), iconSize: [48, 56], iconAnchor: [24, 56] }),
           }).addTo(instance);
           marker.on("click", () => selectCallback.current(stadium.slug));
-          marker.getElement()?.setAttribute("aria-label", stadium.crestClubName ? `${stadium.name}. Rival de las visitas: ${stadium.crestClubName}` : stadium.name);
+          marker.getElement()?.setAttribute("aria-label", `${stadium.name}. ${stadium.visits ? `Visitado, ${stadium.visits} visitas` : "Pendiente de visitar"}${stadium.crestClubName ? `. Rival de las visitas: ${stadium.crestClubName}` : ""}`);
           marker.getElement()?.setAttribute("aria-pressed", "false");
           currentMarkers.set(stadium.slug, marker);
         }
@@ -103,7 +103,7 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
   }
 
   return <section aria-label="Mapa interactivo" className="map-section">
-    <div ref={container} className="stadium-map" aria-label="Estadios visitados" aria-describedby="map-help" />
+    <div ref={container} className="stadium-map" aria-label="Colección de estadios" aria-describedby="map-help" />
     <p id="map-help" className="sr-only">Arrastra el mapa para explorar. Usa la rueda, dos dedos o los controles para ampliar. También puedes desplazarte con las flechas del teclado al enfocar el mapa.</p>
     <div className="map-controls" role="group" aria-label="Controles del mapa">
       <button type="button" disabled={!map} onClick={() => map?.zoomIn()} aria-label="Acercar" title="Acercar">+</button>

@@ -63,7 +63,7 @@ after(async () => {
 const pages = [
   { path: "/", label: "Mapa", title: /Donde tú vayas\./ },
   { path: "/trips", label: "Viajes", title: /id="explorer-panel-title"[^>]*>Viajes<\/h2>/ },
-  { path: "/stadiums", label: "Estadios", title: /id="explorer-panel-title"[^>]*>Estadios visitados<\/h2>/ },
+  { path: "/stadiums", label: "Estadios", title: /id="explorer-panel-title"[^>]*>Colección de estadios<\/h2>/ },
   { path: "/map", label: "Mapa", title: /Donde tú vayas\./ },
 ];
 
@@ -83,7 +83,7 @@ for (const { path, label, title } of pages) {
     for (const href of ["/?view=trips", "/?view=stadiums", "/?view=summary"]) assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /Volver a la vista inicial de la península ibérica/);
     assert.doesNotMatch(html, /aria-label="Mover al/);
-    const active = html.match(/<a\b[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+    const active = html.match(/<a\b[^>]*class="[^"]*\bmap-action\b[^"]*"[^>]*aria-current="page"[^>]*>[\s\S]*?<\/a>/g) ?? [];
     assert.equal(active.length, path === "/trips" || path === "/stadiums" ? 1 : 0);
     const selected = active[0];
     if (selected) assert.ok(selected.replace(/<[^>]*>/g, "").includes(label));
@@ -100,7 +100,7 @@ test("missing pages return HTTP 404 with a Spanish recovery link", async () => {
 });
 
 
-test("public details and stadium visits come from attendance only", async () => {
+test("public details keep visits attendance-only and expose pending stadiums", async () => {
   const { db, pool } = createDatabase(localDatabaseUrl("testing"));
   try {
     const trips = await listTrips(db);
@@ -118,13 +118,16 @@ test("public details and stadium visits come from attendance only", async () => 
     assert.match(cupHtml, /Un partido especial/);
     const ground = await fetch(`${origin}/stadiums/estadio-del-corcho-ejemplo`);
     assert.equal(ground.status, 200);
-    assert.match((await ground.text()).replace(/<!-- -->/g, ""), /2 visitas en el archivo/);
+    assert.match((await ground.text()).replace(/<!-- -->/g, ""), /2 visitas/);
     const notVisited = await fetch(`${origin}/stadiums/estadio-no-visitado-ejemplo`);
-    assert.equal(notVisited.status, 404);
+    assert.equal(notVisited.status, 200);
+    const pendingHtml = await notVisited.text();
+    assert.match(pendingHtml, /Pendiente de visitar/);
+    assert.doesNotMatch(pendingHtml, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
     assert.equal((await fetch(`${origin}/trips/nonexistent-trip`)).status, 404);
     assert.equal((await fetch(`${origin}/trips/${fixtureIds.unattendedMatch}`)).status, 404);
     const index = await (await fetch(`${origin}/trips`)).text();
-    assert.doesNotMatch(index, /UNATTENDED_FIXTURE_NOT_PUBLIC|Estadio no visitado/);
+    assert.doesNotMatch(index, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
     assert.match(index, /Fecha desconocida/);
   } finally { await pool.end(); }
 });
@@ -557,9 +560,9 @@ test("map and panels explain an empty attendance archive without publishing unat
       const response = await fetch(`${origin}${path}`);
       assert.equal(response.status, 200);
       const html = (await response.text()).replace(/<!-- -->/g, "");
-      assert.match(html, /Estadios con coordenadas: 0 de 0/);
-      assert.match(html, /Todavía no hay estadios visitados publicados/);
-      assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC|href="\/\?stadium=/);
+      assert.match(html, /Estadios con coordenadas: 0 de 3/);
+      assert.match(html, /Pendiente/);
+      assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
       if (path.endsWith("trips")) assert.match(html, /Todavía no hay viajes publicados/);
       if (path.endsWith("summary")) assert.match(html, /Resultados conocidos de partidos finalizados: 0 de 0 viajes/);
     }
@@ -569,14 +572,14 @@ test("map and panels explain an empty attendance archive without publishing unat
   }
 });
 
-test("map panels preserve attendance-only links and coordinate coverage without JavaScript", async () => {
+test("map panels expose collection links and coordinate coverage without JavaScript", async () => {
   const response = await fetch(`${origin}/?view=stadiums`);
   const html = (await response.text()).replace(/<!-- -->/g, "");
-  assert.match(html, /Estadios con coordenadas: 0 de 2/);
-  assert.match(html, /Sin coordenadas: 2/);
+  assert.match(html, /Estadios con coordenadas: 0 de 3/);
+  assert.match(html, /Sin coordenadas: 3/);
   assert.match(html, /href="\/\?stadium=estadio-del-corcho-ejemplo"/);
   assert.match(html, /href="\/\?stadium=campo-del-recuerdo-ejemplo"/);
-  assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+  assert.match(html, /estadio-no-visitado-ejemplo/);
   assert.match(html, /Todavía no hay coordenadas/);
   assert.match(html, /class="stadium-map"/);
   assert.match(html, /Ampliar panel/);
@@ -607,7 +610,7 @@ test("shared map details survive direct requests and legacy URLs open their map 
     assert.equal(legacyStadium.status, 307);
     assert.equal(new URL(legacyStadium.headers.get("location")!, origin).searchParams.get("stadium"), "estadio-del-corcho-ejemplo");
     for (const trip of trips.filter((trip) => trip.stadiumId === fixtureIds.ground)) assert.ok(stadium.includes(`href="/?trip=${trip.slug}"`));
-    for (const query of ["stadium=estadio-no-visitado-ejemplo", `trip=${fixtureIds.unattendedMatch}`, "trip=missing", "view=unknown", "trip=a&stadium=b", "view=trips&view=summary"]) {
+    for (const query of ["view=stadiums&state=invalid", `trip=${fixtureIds.unattendedMatch}`, "trip=missing", "view=unknown", "trip=a&stadium=b", "view=trips&view=summary"]) {
       const response = await fetch(`${origin}/?${query}`);
       assert.equal(response.status, 404, query);
       assert.doesNotMatch(await response.text(), /UNATTENDED_FIXTURE_NOT_PUBLIC/);
@@ -624,11 +627,11 @@ test("map panels retain unlocated stadiums after another venue gains coordinates
   try {
     await db.update(stadiums).set({ latitude: 38.2, longitude: -0.7 }).where(eq(stadiums.id, fixtureIds.ground));
     const html = (await (await fetch(`${origin}/?view=stadiums`)).text()).replace(/<!-- -->/g, "");
-    assert.match(html, /Estadios con coordenadas: 1 de 2/);
-    assert.match(html, /Sin coordenadas: 1/);
+    assert.match(html, /Estadios con coordenadas: 1 de 3/);
+    assert.match(html, /Sin coordenadas: 2/);
     assert.match(html, /Ciudad de ejemplo/);
     assert.match(html, /campo-del-recuerdo-ejemplo/);
-    assert.doesNotMatch(html, /estadio-no-visitado-ejemplo/);
+    assert.match(html, /estadio-no-visitado-ejemplo/);
   } finally {
     await db.update(stadiums).set({ latitude: before.latitude, longitude: before.longitude }).where(eq(stadiums.id, before.id));
     await pool.end();
@@ -685,4 +688,25 @@ test("crest HTTP operations authorize every request, normalize images and recove
     await db.delete(storageCleanup).where(eq(storageCleanup.objectKey, (await db.select().from(clubs).where(eq(clubs.id, id)))[0]?.crestObjectKey || ""));
     await db.delete(clubs).where(eq(clubs.id, id)); await pool.end();
   }
+});
+
+test("collection filters and territorial progress respect attendance boundaries", async () => {
+  const pending = (await (await fetch(`${origin}/?view=stadiums&state=pending`)).text()).replace(/<!-- -->/g, "");
+  assert.match(pending, /○ Pendiente de visitar/);
+  assert.match(pending, /state=pending/);
+  const pendingList = pending.match(/<ul class="explorer-stadiums">([\s\S]*?)<\/ul>/)?.[1];
+  assert.ok(pendingList);
+  assert.match(pendingList, /estadio-no-visitado-ejemplo/);
+  assert.doesNotMatch(pendingList, /estadio-del-corcho-ejemplo|campo-del-recuerdo-ejemplo/);
+  assert.doesNotMatch(pending, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
+  const visited = (await (await fetch(`${origin}/?view=stadiums&state=visited`)).text()).replace(/<!-- -->/g, "");
+  assert.match(visited, /✓ Visitado/);
+  const visitedList = visited.match(/<ul class="explorer-stadiums">([\s\S]*?)<\/ul>/)?.[1];
+  assert.ok(visitedList);
+  assert.doesNotMatch(visitedList, /estadio-no-visitado-ejemplo/);
+  const summary = (await (await fetch(`${origin}/?view=summary`)).text()).replace(/<!-- -->/g, "");
+  assert.match(summary, /Provincias: .* de 50/);
+  assert.match(summary, /Comunidades autónomas: .* de 17/);
+  assert.match(summary, /Geografía conocida/);
+  assert.match(summary, /Ceuta/);
 });

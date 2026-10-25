@@ -24,3 +24,7 @@ Milestones 1–3 are complete. The owner confirmed real Google login, admin acce
 9. Province visualization: licensed simplified boundaries and derived visited geography, including islands/autonomous cities. Other polish follows concrete needs.
 
 No multi-user roles, achievements, live football feeds, scheduled sync infrastructure or generic import/provenance framework without demonstrated need.
+
+## Authorized post-MVP increment: GEO-02 / COL-01 / COL-02
+
+Owner authorized implementation on 2026-10-25: the public collection includes all registered stadiums, with attendance-derived visited/pending status, accessible markers and list filters. Territorial progress counts 50 provinces and 17 autonomous communities, including islands, and shows Ceuta/Melilla separately with known-geography coverage. Kilometres remain dependent on GEO-01; polygons remain deferred. See [PRODUCT](PRODUCT.md#geo-02--col-01--col-02--criterio-vigente). This increment does not authorize publishing or production changes.

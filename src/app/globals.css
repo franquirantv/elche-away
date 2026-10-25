@@ -289,3 +289,16 @@ button:disabled { opacity: 0.6; cursor: wait; }
 
 .list-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
 .paged-review-items { display: grid; gap: 20px; }
+
+/* Collection states retain symbols/text alongside colour. */
+.stadium-marker.is-pending .stadium-badge { border-style: dashed; border-color: #66645c; color: #66645c; background: #fffdf6; }
+.stadium-marker.is-pending .stadium-badge::after { border-top-color: #66645c; }
+.stadium-badge-state { position: absolute; top: -9px; right: -12px; min-width: 23px; padding: 3px; border-radius: 10px; background: #193e30; color: white; font: 700 11px/1.2 Arial, sans-serif; }
+.stadium-marker.is-pending .stadium-badge-state { background: #66645c; }
+.stadium-marker.is-selected .stadium-badge { border-style: solid; border-color: #70421c; }
+.collection-state { font-weight: 600; }
+.territorial-summary { padding-block: 1rem; border-bottom: 1px dashed #8c9c8e; }
+.territorial-summary progress { width: 100%; accent-color: #155d43; }
+.territory-list { padding-left: 1.2rem; }
+.collection-filters a { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem .65rem; border: 1px solid #a4afa5; border-radius: .4rem; }
+.collection-filters a[aria-current="page"] { background: #193e30; color: white; font-weight: 700; text-decoration: underline; text-underline-offset: .2em; }

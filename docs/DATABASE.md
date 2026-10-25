@@ -1,5 +1,9 @@
 # Database
 
+## GEO-02 / COL-01 / COL-02 · Criterio vigente
+
+El propietario autorizó el 2026-10-25 publicar todos los estadios registrados como catálogo dinámico del reto, incluidos pendientes. Esta excepción sustituye las limitaciones anteriores de este documento sobre estadios y marcadores exclusivamente visitados; los partidos sin asistencia siguen privados. Las visitas, los escudos y las estadísticas personales continúan derivados de asistencias. Filtros de colección y criterio territorial (50 provincias, 17 comunidades, islas incluidas, Ceuta/Melilla aparte, sin kilómetros) se documentan en [PRODUCT](PRODUCT.md#geo-02--col-01--col-02--criterio-vigente). No requiere migración ni servicios nuevos.
+
 Milestone 2 implements the seven core tables in `src/db/schema.ts` with a reviewed initial migration under `drizzle/`. Milestone 4c adds import mappings; Milestone 5 adds club crest object keys and recoverable Storage cleanup; photos remain planned. PostgreSQL with Drizzle. Domain tables use UUID primary keys and created/updated timestamps (`timestamptz`); application writes maintain updated time. Avoid database extensions unless required.
 
 ## Entities and domain decision
