@@ -47,16 +47,30 @@ export function listVisitedStadiums(db: QueryDatabase, window?: { limit: number;
   return db.select({
     id: stadiums.id, slug: stadiums.slug, name: stadiums.name, city: stadiums.city, provinceCode: stadiums.provinceCode,
     latitude: stadiums.latitude, longitude: stadiums.longitude,
-    isSpecial: sql<boolean>`bool_or(${attendance.isSpecial})`,
-    markerCrestKey: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.crestObjectKey}) end`,
-    markerClubName: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.name}) end`,
-    visits: sql<number>`count(*)::integer`,
+    isSpecial: sql<boolean>`bool_or(${attendance.isSpecial})`.as("is_special"),
+    markerCrestKey: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.crestObjectKey}) end`.as("marker_crest_key"),
+    markerClubName: sql<string | null>`case when ${unanimousOpponent} then min(${opponent.name}) end`.as("marker_club_name"),
+    visits: sql<number>`count(*)::integer`.as("visits"),
   }).from(stadiums)
     .innerJoin(matches, eq(matches.stadiumId, stadiums.id))
     .innerJoin(attendance, eq(attendance.matchId, matches.id))
     .leftJoin(opponent, eq(opponent.id, sql`case when ${matches.homeClubId} = ${ELCHE_CLUB_ID} then ${matches.awayClubId} when ${matches.awayClubId} = ${ELCHE_CLUB_ID} then ${matches.homeClubId} end`))
     .groupBy(stadiums.id).orderBy(stadiums.name, stadiums.id)
     .limit(window?.limit ?? 2147483647).offset(window?.offset ?? 0);
+}
+
+// Explicit public collection: every registered venue, with attendance-only aggregates.
+export function listCollectionStadiums(db: QueryDatabase, window?: { limit: number; offset: number }, state: "all" | "visited" | "pending" = "all") {
+  const visited = listVisitedStadiums(db).as("visited_stadiums");
+  const visits = sql<number>`coalesce(${visited.visits}, 0)::integer`;
+  return db.select({
+    id: stadiums.id, slug: stadiums.slug, name: stadiums.name, city: stadiums.city, provinceCode: stadiums.provinceCode,
+    latitude: stadiums.latitude, longitude: stadiums.longitude,
+    visits, isSpecial: sql<boolean>`coalesce(${visited.isSpecial}, false)`,
+    markerCrestKey: visited.markerCrestKey, markerClubName: visited.markerClubName,
+  }).from(stadiums).leftJoin(visited, eq(stadiums.id, visited.id))
+    .where(state === "visited" ? sql`${visits} > 0` : state === "pending" ? sql`${visits} = 0` : undefined)
+    .orderBy(stadiums.name, stadiums.id).limit(window?.limit ?? 2147483647).offset(window?.offset ?? 0);
 }
 
 export async function findVisitedStadium(db: QueryDatabase, slug: string) {

@@ -1,5 +1,9 @@
 # Visual and UX direction
 
+## GEO-02 / COL-01 / COL-02 · Criterio vigente
+
+El propietario autorizó el 2026-10-25 publicar todos los estadios registrados como catálogo dinámico del reto, incluidos pendientes. Esta excepción sustituye las limitaciones anteriores de este documento sobre la colección de estadios exclusivamente visitados; el mapa conserva únicamente marcadores con asistencia; los partidos sin asistencia siguen privados. Las visitas, los escudos y las estadísticas personales continúan derivados de asistencias. Filtros de colección y criterio territorial (50 provincias, 17 comunidades, islas incluidas, Ceuta/Melilla aparte, sin kilómetros) se documentan en [PRODUCT](PRODUCT.md#geo-02--col-01--col-02--criterio-vigente). No requiere migración ni servicios nuevos.
+
 ## Hierarchy
 
 Lead with **Elche Away**, **“Donde tú vayas.”** and the visited-stadium map on `/`. Owner-approved UX-01/02/03 direction (2026-10-24): navigation is Mapa, Viajes, Estadios, Resumen; all four destinations operate within the map experience. The summary reuses existing attendance totals and coverage, not new statistics. Stadium panels list visits; a visit opens a trip panel with fixture facts and personal memories. A dedicated expanded statistics experience remains deferred.
@@ -45,3 +49,7 @@ Verificación local (2026-10-24): Chrome headless con datos sintéticos en bases
 ## List pagination
 
 Admin fixtures and reference editors use pages of 20 with previous/next links that preserve filters. Public trip lists, visited stadium lists and a stadium's visits show 20 initial entries and a “Cargar más” button; map markers and archive totals remain complete. Without JavaScript, public panels offer previous/next links. Loading and retry failures are announced inline. Import reviews, coverage and progress use pages of 20; changing pages preserves every reference/fixture decision for the next preview submission.
+
+Verificación local GEO-02/COL-01/02 (2026-10-25): pruebas focalizadas de consultas PostgreSQL y paneles HTTP sobre bases temporales sintéticas, eliminadas al terminar. Comprobados pendientes sin partidos públicos, filtros, visitas repetidas, cobertura territorial y URLs. Chrome headless con WebGL por software: marcadores visitados/pendientes, selección directa de pendiente y paneles a 1440×1000 y 390×844; sin desbordamiento horizontal. Capturas revisadas. La cartografía remota no se ha validado visualmente en estas capturas; quedan la revisión de Preview con teselas cargadas y la comprobación táctil en dispositivo físico. ESLint focalizado y `git diff --check` correctos; verificación completa reservada a CI.
+
+Ajuste posterior del propietario (2026-10-25): los estadios pendientes permanecen en la colección y en sus paneles, pero se excluyen de los datos y marcadores del mapa. La cobertura de coordenadas del mapa vuelve a referirse solo a estadios visitados. La verificación visual anterior de marcadores pendientes describe la propuesta sustituida.

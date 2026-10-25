@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { getDatabase } from "./client";
-import { readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "./queries";
+import { listCollectionStadiums, readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "./queries";
 
 // Request-time reads only: no build-time DB dependency or persistent data cache.
 export async function getTrips(stadiumId?: string, window?: { limit: number; offset: number }) {
@@ -32,4 +32,10 @@ export async function getHomeSummary() {
   await connection();
   try { return await readHomeSummary(getDatabase()); }
   catch { throw new Error("No se pudo consultar el resumen del archivo."); }
+}
+
+export async function getCollectionStadiums(window?: { limit: number; offset: number }, state: "all" | "visited" | "pending" = "all") {
+  await connection();
+  try { return await listCollectionStadiums(getDatabase(), window, state); }
+  catch { throw new Error("No se pudo consultar la colección de estadios."); }
 }

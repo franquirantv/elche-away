@@ -6,7 +6,12 @@
 
 Next.js 16 (App Router), React 19, TypeScript 5 estricto, Tailwind CSS 4, PostgreSQL en Neon, Neon Auth con Google, Neon Object Storage para escudos, Drizzle ORM y el driver `pg` (node-postgres). El mapa combina Leaflet con MapLibre GL JS y el estilo Liberty de OpenFreeMap, basado en OpenStreetMap. npm gestiona dependencias; ESLint comprueba código, `tsx` ejecuta scripts TypeScript y el runner de Node ejecuta pruebas. `package-lock.json` fija las versiones resueltas.
 
-PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+PostgreSQL es la única fuente persistente. Hay acceso con Google, edición privada de referencias y gestión local de partidos/asistencias e importación explícita desde OpenFootball con preview global y alternativa de archivo local; hay un mapa interactivo de estadios visitados y una colección de todos los estadios registrados, con estados visitado/pendiente y progreso territorial en Resumen; todavía no hay fotos. Los ejemplos son sintéticos: no representan resultados ni viajes reales. No hay datos JSON alternativos ni un fallback de demostración si falla PostgreSQL.
+
+## Colección pública y progreso territorial
+
+Todos los estadios que se creen en el admin pasan al catálogo público del reto, aunque no tengan asistencias. Publican nombre, ubicación y coordenadas; sus partidos sin asistencia continúan privados. La colección se filtra en `/?view=stadiums&state=all`, `state=visited` o `state=pending`. Su total cambia al mantener los estadios. Los pendientes permanecen en la colección; el mapa solo muestra estadios con asistencia. Resumen muestra progreso de provincias (50), comunidades (17) y Ceuta/Melilla aparte, incluyendo islas y explicando la cobertura; no calcula kilómetros.
+
 
 ## Requisitos
 

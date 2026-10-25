@@ -7,7 +7,7 @@ import "../scripts/env";
 import { createDatabase, type Database } from "../src/db/connection";
 import { localDatabaseUrl } from "../src/db/environment";
 import { attendance, clubs, competitions, matches, stadiums } from "../src/db/schema";
-import { readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "../src/db/queries";
+import { listCollectionStadiums, readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "../src/db/queries";
 import { fixtureIds, seedSyntheticData } from "../src/db/fixtures";
 import { validateMatch } from "../src/db/validation";
 import { ELCHE_CLUB_ID } from "../src/lib/identity";
@@ -317,5 +317,25 @@ test("map crest represents a unanimous known attended opponent, never a stadium 
     await tx.update(clubs).set({ crestObjectKey: null }).where(eq(clubs.id, fixtureIds.north));
     assert.equal((await ground()).markerCrestKey, null);
     assert.equal((await ground()).visits, 1);
+  });
+});
+
+test("collection includes registered pending venues without publishing unattended fixture facts", async () => {
+  const collection = await listCollectionStadiums(db);
+  const pending = collection.find((stadium) => stadium.slug === "estadio-no-visitado-ejemplo");
+  assert.ok(pending);
+  assert.equal(pending.visits, 0);
+  assert.equal(pending.markerCrestKey, null);
+  assert.equal(pending.markerClubName, null);
+  assert.equal(pending.isSpecial, false);
+  assert.equal(collection.find((stadium) => stadium.id === fixtureIds.ground)?.visits, 2);
+  assert.ok(!("factualNotes" in pending));
+  assert.equal(await findTrip(db, fixtureIds.unattendedMatch), undefined);
+  assert.deepEqual(await listCollectionStadiums(db, undefined, "visited"), await listVisitedStadiums(db));
+  assert.ok((await listCollectionStadiums(db, undefined, "pending")).every((stadium) => stadium.visits === 0));
+  assert.deepEqual(await listCollectionStadiums(db, { limit: 1, offset: 1 }), collection.slice(1, 2));
+  await rolledBack(async (tx) => {
+    const [venue] = await tx.insert(stadiums).values({ name: "Empty target", slug: "empty-target" }).returning();
+    assert.equal((await listCollectionStadiums(tx)).find((stadium) => stadium.id === venue.id)?.visits, 0);
   });
 });
