@@ -2,7 +2,7 @@
 
 Propuestas para la siguiente fase de Elche Away. Este documento organiza oportunidades; no autoriza implementación, no modifica el [ROADMAP](ROADMAP.md) ni asigna milestones, fechas o compromisos de entrega. Cada identificador permite extraer después una tarea independiente.
 
-La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge solo trabajo pendiente. Revisión completa realizada el 2026-10-25 contra el código de `main` y la rama `feature/vis-01-vis-02`.
+La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge trabajo pendiente y, de forma explícita, implementaciones locales aún pendientes de revisión. Revisión completa realizada el 2026-10-25 contra el código de `main` y la rama `feature/vis-01-vis-02`.
 
 Trabajo implementado retirado de la lista de tareas:
 
@@ -49,6 +49,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 
 ### MAP-02 · Mostrar conexión punteada y distancia al estadio
 
+**Implementado localmente para revisión (2026-10-25)** en `feature/map-02-map-03`. Origen exacto fijado por el propietario en Elche, distancia geográfica en línea recta y solo ida. Contrato, cálculo y límites en [MAP_EXPERIENCE](MAP_EXPERIENCE.md#map-02-y-map-03--conexiones-y-sedes-solapadas). Pendientes CI, Preview e integración. El texto siguiente conserva el planteamiento original.
+
 **P2 · Nueva funcionalidad.** Enriquece la exploración cuando selección y criterio de distancia estén definidos.
 
 - **Objetivo:** al pasar el cursor o seleccionar un estadio, mostrar una conexión de puntos desde Elche/origen y su distancia aproximada en kilómetros.
@@ -57,6 +59,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Dependencias / decisiones pendientes:** selección y paneles del mapa ya disponibles; GEO-01 pendiente. Resolver origen fijo o por viaje, línea recta frente a recorrido real/estimado y solo ida frente a ida y vuelta. No asumir fórmula, servicio de rutas ni desplazamiento real; etiquetar la aproximación elegida.
 
 ### MAP-03 · Resolver marcadores solapados y evaluar clustering
+
+**Implementado localmente para revisión (2026-10-25)** en `feature/map-02-map-03`: selector de estadios solapados según el zoom actual, incluidas coordenadas idénticas; sin clustering global. Contrato y comprobaciones en [MAP_EXPERIENCE](MAP_EXPERIENCE.md#map-02-y-map-03--conexiones-y-sedes-solapadas). Pendientes CI, Preview e integración. El texto siguiente conserva el planteamiento original.
 
 **P2 · Cambio estructural de UX.** Priorizar cuando la densidad real dificulte seleccionar estadios.
 
@@ -77,6 +81,8 @@ Las prioridades son iniciales y revisables. Cada item indica su tipo: **bug/fix*
 - **Dependencias / decisiones pendientes:** paneles del mapa ya disponibles; auditar disponibilidad de datos antes de prometer métricas. Derivar todo de asistencias en PostgreSQL, sin contadores persistidos; excluir desconocidos solo del cálculo correspondiente e indicar cobertura. El balance requiere partidos finalizados con resultado conocido; no contar penaltis de tanda ni resultados desconocidos como 0–0.
 
 ### GEO-01 · Definir el significado y cálculo de kilómetros
+
+**Decisión parcial para MAP-02 (2026-10-25):** el propietario autoriza origen fijo `38.25928802298828, -0.7093247209572442`, línea recta y solo ida, etiquetado como aproximación geográfica. No autoriza acumulados ni inferir recorridos reales. El alcance restante de esta investigación continúa pendiente.
 
 **P1 · Nueva funcionalidad (investigación).** Es una decisión compartida por la distancia del mapa y las estadísticas acumuladas.
 
@@ -131,4 +137,4 @@ Completar la **validación pendiente de ADM-01**, especialmente las tres horas r
 
 La navegación sobre el mapa, la cartografía Liberty y la dirección visual con microinteracciones ya están implementadas. No volver a planificar UX-01/02/03, MAP-01 ni VIS-01/02 como trabajo de desarrollo pendiente. La entrega de VIS-01/02 se sigue en la PR #10; no constituye una nueva tarea de desarrollo.
 
-**GEO-01** es candidato a investigación separada si se quiere priorizar distancias. **STA-01** puede ampliar el resumen existente; **MAP-02**, **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos y clustering siguen pendientes y no bloquean estas decisiones. Cualquier ampliación de las microinteracciones ya disponibles debe tener un alcance nuevo y concreto.
+**MAP-02/03** están implementados localmente para revisión; su entrega no acredita integración. **GEO-01** conserva la investigación de acumulados y recorridos más allá del criterio geográfico aprobado para MAP-02. **STA-01** puede ampliar el resumen existente; **GEO-02** y **COL-01** necesitan resolver primero sus criterios de cálculo o catálogo. Fotos y clustering global siguen pendientes y no bloquean estas decisiones. Cualquier ampliación de las microinteracciones ya disponibles debe tener un alcance nuevo y concreto.

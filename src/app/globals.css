@@ -133,6 +133,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .map-attribution a { text-decoration: underline; }
 /* Leaflet owns the marker transform; animate only the inner badge. */
 .stadium-marker { background: transparent; }
+.map-overlap-list { display: grid; gap: 6px; }
+.map-overlap-list p { margin: 0 0 4px; font-weight: 700; }
+.map-overlap-list a { display: block; padding: 10px; min-height: 44px; border: 1px solid #cbd5ca; border-radius: 6px; color: #193e30; }
+.map-overlap-list a:focus-visible { outline: 3px solid #155d43; outline-offset: 2px; }
+.map-distance-label { max-width: 220px; white-space: normal; text-align: center; color: #193e30; }
 .stadium-badge { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: 2px; border: 3px solid #155d43; border-radius: 50%; background: white; color: #155d43; box-shadow: 0 2px 7px #19362c50; transition: scale .16s ease; }
 .stadium-badge::after { content: ""; position: absolute; bottom: -10px; left: 13px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid #155d43; }
 .stadium-badge-image { width: 30px; height: 30px; object-fit: contain; }

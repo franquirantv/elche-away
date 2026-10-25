@@ -6,6 +6,9 @@ import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapConfig } from "@/lib/map-config";
 import { createStadiumBadge } from "@/lib/stadium-badge";
+import { markersOverlap } from "@/lib/map-overlap";
+import { mapDetailHref } from "@/lib/map-navigation";
+import { distanceLabel, mapOrigin } from "@/lib/map-distance";
 import { MapIcon } from "./map-icon";
 
 export type MapStadium = { slug: string; name: string; location: string; latitude: number | null; longitude: number | null; visits: number; isSpecial: boolean; crestPath: string | null; crestClubName: string | null };
@@ -16,8 +19,12 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
 }) {
   const container = useRef<HTMLDivElement>(null);
   const markers = useRef(new Map<string, Marker>());
+  const liveMap = useRef<LeafletMap | null>(null);
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [message, setMessage] = useState("Cargando mapa…");
+  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+  const [focusedSlug, setFocusedSlug] = useState<string | null>(null);
+  const distanceStadium = stadiums.find((stadium) => stadium.slug === (hoveredSlug ?? focusedSlug ?? selectedSlug));
   const selectCallback = useRef(onStadiumSelect);
   useEffect(() => { selectCallback.current = onStadiumSelect; }, [onStadiumSelect]);
 
@@ -27,6 +34,7 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
     let instance: LeafletMap | undefined;
     const currentMarkers = markers.current;
     function removeMap() {
+      liveMap.current = null;
       try { instance?.remove(); } catch {
         // A failed WebGL constructor can leave the bridge without a renderer to remove.
         container.current?.replaceChildren();
@@ -45,18 +53,60 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
             alt: stadium.name,
             icon: L.divIcon({ className: "stadium-marker", html: createStadiumBadge(stadium.crestPath), iconSize: [48, 56], iconAnchor: [24, 56] }),
           }).addTo(instance);
-          marker.on("click", () => selectCallback.current(stadium.slug));
+          marker.on("mouseover", () => setHoveredSlug(stadium.slug));
+          marker.on("mouseout", () => setHoveredSlug(null));
+          marker.getElement()?.addEventListener("focus", () => setFocusedSlug(stadium.slug));
+          marker.getElement()?.addEventListener("blur", () => setFocusedSlug(null));
+          marker.on("click", () => {
+            if (!instance) return;
+            const activeMap = instance;
+            const point = activeMap.latLngToContainerPoint(marker.getLatLng());
+            const nearby = stadiums.filter((candidate) => {
+              const other = currentMarkers.get(candidate.slug);
+              return other && markersOverlap(point, activeMap.latLngToContainerPoint(other.getLatLng()));
+            });
+            if (nearby.length < 2) { selectCallback.current(stadium.slug); return; }
+            const list = document.createElement("div");
+            list.className = "map-overlap-list";
+            list.addEventListener("keydown", (event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              instance?.closePopup();
+              marker.getElement()?.focus({ preventScroll: true });
+            });
+            const heading = document.createElement("p");
+            heading.textContent = `${nearby.length} estadios en esta zona`;
+            list.append(heading);
+            for (const candidate of nearby) {
+              const link = document.createElement("a");
+              link.href = mapDetailHref("stadium", candidate.slug);
+              link.textContent = `${candidate.name} · ${candidate.location}`;
+              link.addEventListener("click", (event) => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                instance?.closePopup();
+                selectCallback.current(candidate.slug);
+              });
+              list.append(link);
+            }
+            L.popup({ autoPan: false, maxHeight: 220, maxWidth: 260 })
+              .setLatLng(marker.getLatLng()).setContent(list).openOn(instance);
+            list.querySelector("a")?.focus({ preventScroll: true });
+          });
           marker.getElement()?.setAttribute("aria-label", stadium.crestClubName ? `${stadium.name}. Rival de las visitas: ${stadium.crestClubName}` : stadium.name);
           marker.getElement()?.setAttribute("aria-pressed", "false");
           currentMarkers.set(stadium.slug, marker);
         }
         instance.fitBounds(initialBounds, { padding: [36, 72], animate: false });
+        instance.on("zoomstart movestart", () => instance?.closePopup());
         layer.addTo(instance);
         const renderer = layer.getMaplibreMap();
         renderer.on("error", () => { if (!cancelled) setMessage("No se ha podido cargar parte del mapa. Puedes seguir consultando los viajes y estadios con los controles del archivo."); });
         const canvas = renderer.getCanvas();
         canvas.setAttribute("aria-hidden", "true");
         canvas.tabIndex = -1;
+        liveMap.current = instance;
         setMap(instance);
         setMessage("");
       } catch {
@@ -74,6 +124,7 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
 
   useEffect(() => {
     if (!map) return;
+    map.closePopup();
     for (const [slug, marker] of markers.current) {
       const active = slug === selectedSlug;
       marker.getElement()?.classList.toggle("is-selected", active);
@@ -95,6 +146,25 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
     return () => { map.off("resize", centerSelection); };
   }, [map, selectedSlug, config.maxZoom]);
 
+  useEffect(() => {
+    if (!map || !distanceStadium || distanceStadium.latitude === null || distanceStadium.longitude === null) return;
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+    const { latitude, longitude } = distanceStadium;
+    void import("leaflet").then((L) => {
+      if (cancelled || liveMap.current !== map) return;
+      const line = L.polyline([mapOrigin, [latitude, longitude]], {
+        color: "#155d43", weight: 3, dashArray: "1 9", lineCap: "round", interactive: false,
+      }).addTo(map);
+      const label = document.createElement("span");
+      label.textContent = distanceLabel(latitude, longitude);
+      const tooltip = L.tooltip({ permanent: true, direction: "top", offset: [0, -64], className: "map-distance-label" })
+        .setLatLng([latitude, longitude]).setContent(label).addTo(map);
+      cleanup = () => { line.remove(); tooltip.remove(); };
+    });
+    return () => { cancelled = true; cleanup?.(); };
+  }, [map, distanceStadium]);
+
   function resetView() {
     if (!map) return;
     map.stop();
@@ -104,7 +174,8 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
 
   return <section aria-label="Mapa interactivo" className="map-section">
     <div ref={container} className="stadium-map" aria-label="Estadios visitados" aria-describedby="map-help" />
-    <p id="map-help" className="sr-only">Arrastra el mapa para explorar. Usa la rueda, dos dedos o los controles para ampliar. También puedes desplazarte con las flechas del teclado al enfocar el mapa.</p>
+    <p id="map-help" className="sr-only">Arrastra el mapa para explorar. Usa la rueda, dos dedos o los controles para ampliar. También puedes desplazarte con las flechas del teclado al enfocar el mapa. Selecciona un marcador para elegir entre los estadios que se solapan. Al enfocar o seleccionar un estadio se muestra su distancia aproximada desde Elche en línea recta, solo ida.</p>
+    <p className="sr-only" role="status">{distanceStadium && distanceStadium.latitude !== null && distanceStadium.longitude !== null ? `${distanceStadium.name}: ${distanceLabel(distanceStadium.latitude, distanceStadium.longitude)}` : ""}</p>
     <div className="map-controls" role="group" aria-label="Controles del mapa">
       <button type="button" disabled={!map} onClick={() => map?.zoomIn()} aria-label="Acercar" title="Acercar">+</button>
       <button type="button" disabled={!map} onClick={() => map?.zoomOut()} aria-label="Alejar" title="Alejar">−</button>
