@@ -24,7 +24,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const state = params.state ?? "all";
   if (state !== "all" && state !== "visited" && state !== "pending") notFound();
   const visitedCount = stadiums.filter((stadium) => stadium.visits > 0).length;
-  const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
+  const mapStadiums: MapStadium[] = stadiums.filter((stadium) => stadium.visits > 0).map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
   let title: string | null = null;
   let panel: ReactNode = null;
   let selectedSlug: string | null = null;
@@ -79,12 +79,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </>;
     }
   }
-  const coordinateCount = stadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
+  const coordinateCount = mapStadiums.filter((stadium) => stadium.latitude !== null && stadium.longitude !== null).length;
   const information = <>
-    <p>Estadios con coordenadas: {coordinateCount} de {stadiums.length}. Sin coordenadas: {stadiums.length - coordinateCount}.</p>
+    <p>Estadios con coordenadas: {coordinateCount} de {visitedCount}. Sin coordenadas: {visitedCount - coordinateCount}.</p>
     {coordinateCount === 0 && <p>Todavía no hay coordenadas para mostrar marcadores.</p>}
     {!stadiums.length && <p>Todavía no hay estadios registrados.</p>}
-    <p>✓ Visitado · ○ Pendiente. El borde resaltado identifica el estadio seleccionado.</p>
+    <p>El mapa muestra solo estadios visitados. Los pendientes se pueden consultar en la colección. El borde resaltado identifica el estadio seleccionado.</p>
     <Link href="/?view=stadiums" scroll={false} className="inline-link">Consultar estadios del archivo</Link>
   </>;
   return <MapExplorer stadiums={mapStadiums} config={mapConfig()} selectedSlug={selectedSlug} panelKey={panelKey} title={title} information={information}>{panel}</MapExplorer>;

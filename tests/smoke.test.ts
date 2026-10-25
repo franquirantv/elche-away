@@ -560,8 +560,8 @@ test("map and panels explain an empty attendance archive without publishing unat
       const response = await fetch(`${origin}${path}`);
       assert.equal(response.status, 200);
       const html = (await response.text()).replace(/<!-- -->/g, "");
-      assert.match(html, /Estadios con coordenadas: 0 de 3/);
-      assert.match(html, /Pendiente/);
+      assert.match(html, /Estadios con coordenadas: 0 de 0/);
+      assert.match(html, /pendientes/);
       assert.doesNotMatch(html, /UNATTENDED_FIXTURE_NOT_PUBLIC/);
       if (path.endsWith("trips")) assert.match(html, /Todavía no hay viajes publicados/);
       if (path.endsWith("summary")) assert.match(html, /Resultados conocidos de partidos finalizados: 0 de 0 viajes/);
@@ -575,8 +575,8 @@ test("map and panels explain an empty attendance archive without publishing unat
 test("map panels expose collection links and coordinate coverage without JavaScript", async () => {
   const response = await fetch(`${origin}/?view=stadiums`);
   const html = (await response.text()).replace(/<!-- -->/g, "");
-  assert.match(html, /Estadios con coordenadas: 0 de 3/);
-  assert.match(html, /Sin coordenadas: 3/);
+  assert.match(html, /Estadios con coordenadas: 0 de 2/);
+  assert.match(html, /Sin coordenadas: 2/);
   assert.match(html, /href="\/\?stadium=estadio-del-corcho-ejemplo"/);
   assert.match(html, /href="\/\?stadium=campo-del-recuerdo-ejemplo"/);
   assert.match(html, /estadio-no-visitado-ejemplo/);
@@ -627,8 +627,8 @@ test("map panels retain unlocated stadiums after another venue gains coordinates
   try {
     await db.update(stadiums).set({ latitude: 38.2, longitude: -0.7 }).where(eq(stadiums.id, fixtureIds.ground));
     const html = (await (await fetch(`${origin}/?view=stadiums`)).text()).replace(/<!-- -->/g, "");
-    assert.match(html, /Estadios con coordenadas: 1 de 3/);
-    assert.match(html, /Sin coordenadas: 2/);
+    assert.match(html, /Estadios con coordenadas: 1 de 2/);
+    assert.match(html, /Sin coordenadas: 1/);
     assert.match(html, /Ciudad de ejemplo/);
     assert.match(html, /campo-del-recuerdo-ejemplo/);
     assert.match(html, /estadio-no-visitado-ejemplo/);
