@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import type { QueryDatabase } from "./connection";
 import { attendance, clubs, competitions, matches, seasons, stadiums, tiers } from "./schema";
 
+import { PAGE_SIZE } from "../lib/pagination";
 import { ELCHE_CLUB_ID } from "../lib/identity";
 
 const home = alias(clubs, "home_club");
@@ -29,9 +30,10 @@ function attendedFixtures(db: QueryDatabase) {
     .leftJoin(stadiums, eq(matches.stadiumId, stadiums.id));
 }
 
-export function listTrips(db: QueryDatabase, stadiumId?: string) {
+export function listTrips(db: QueryDatabase, stadiumId?: string, window?: { limit: number; offset: number }) {
   return attendedFixtures(db).where(stadiumId ? eq(matches.stadiumId, stadiumId) : undefined)
-    .orderBy(sql`${matches.playedOn} desc nulls last`, matches.id);
+    .orderBy(sql`${matches.playedOn} desc nulls last`, matches.id)
+    .limit(window?.limit ?? PAGE_SIZE).offset(window?.offset ?? 0);
 }
 
 export async function findTrip(db: QueryDatabase, slug: string) {
@@ -39,7 +41,7 @@ export async function findTrip(db: QueryDatabase, slug: string) {
   return trip;
 }
 
-export function listVisitedStadiums(db: QueryDatabase) {
+export function listVisitedStadiums(db: QueryDatabase, window?: { limit: number; offset: number }) {
   // Representation of attended opponents only, never stadium ownership.
   const unanimousOpponent = sql`count(distinct ${opponent.id}) = 1 and count(${opponent.id}) = count(*)`;
   return db.select({
@@ -53,7 +55,8 @@ export function listVisitedStadiums(db: QueryDatabase) {
     .innerJoin(matches, eq(matches.stadiumId, stadiums.id))
     .innerJoin(attendance, eq(attendance.matchId, matches.id))
     .leftJoin(opponent, eq(opponent.id, sql`case when ${matches.homeClubId} = ${ELCHE_CLUB_ID} then ${matches.awayClubId} when ${matches.awayClubId} = ${ELCHE_CLUB_ID} then ${matches.homeClubId} end`))
-    .groupBy(stadiums.id).orderBy(stadiums.name, stadiums.id);
+    .groupBy(stadiums.id).orderBy(stadiums.name, stadiums.id)
+    .limit(window?.limit ?? 2147483647).offset(window?.offset ?? 0);
 }
 
 export async function findVisitedStadium(db: QueryDatabase, slug: string) {

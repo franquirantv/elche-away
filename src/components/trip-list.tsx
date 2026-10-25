@@ -20,7 +20,7 @@ export function TripList({ trips, onMap = false }: { trips: PublicTrip[]; onMap?
                   <span>{trip.season ?? "Temporada desconocida"}</span>
                   {trip.isSpecial && <span className="special-label">Un partido especial</span>}
                 </div>
-                <h3><Link href={onMap ? mapDetailHref("trip", trip.slug) : `/trips/${trip.slug}`} scroll={!onMap}>{tripTitle(trip)}{onMap && <ArchiveLinkStatus />}</Link></h3>
+                <h3><Link prefetch={false} href={onMap ? mapDetailHref("trip", trip.slug) : `/trips/${trip.slug}`} scroll={!onMap}>{tripTitle(trip)}{onMap && <ArchiveLinkStatus />}</Link></h3>
                 <p className="trip-score">{tripScore(trip)}</p>
                 <p>{trip.competition ?? "Competición desconocida"} · {trip.stadiumName ?? "Estadio desconocido"}</p>
               </li>

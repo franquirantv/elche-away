@@ -5,13 +5,16 @@ import { fixtureFacts } from "../server/fixture-input";
 import { InvalidReference, validId, type ReferenceValues } from "../server/reference-input";
 import { availableSlug } from "../lib/slugs";
 
+import { PAGE_SIZE, pageOffset } from "../lib/pagination";
+
 type FixtureDatabase = Pick<Database, "select" | "insert" | "update" | "delete">;
-export async function readAdminFixtures(db: FixtureDatabase, filters: { seasonId?: string; competitionId?: string } = {}) {
+export async function readAdminFixtures(db: FixtureDatabase, filters: { seasonId?: string; competitionId?: string; page?: number } = {}) {
   for (const id of [filters.seasonId, filters.competitionId]) if (id) validId(id);
   return db.select({ fixture: matches, personal: attendance }).from(matches)
     .leftJoin(attendance, eq(attendance.matchId, matches.id))
     .where(and(filters.seasonId ? eq(matches.seasonId, filters.seasonId) : undefined, filters.competitionId ? eq(matches.competitionId, filters.competitionId) : undefined))
-    .orderBy(sql`${matches.playedOn} desc nulls last`, matches.id);
+    .orderBy(sql`${matches.playedOn} desc nulls last`, matches.id)
+    .limit(PAGE_SIZE + 1).offset(pageOffset(filters.page ?? 1));
 }
 
 // Only the authorized server boundary calls these helpers in the application.

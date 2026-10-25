@@ -450,3 +450,11 @@ Verificación con los nombres del build real (2026-10-20): lint y tipos correcto
 ## Comparador de estilos sobre OpenStreetMap
 
 Con `npm run dev`, abre `/map-style-previews/index.html`: siete estilos alternativos y OSM estándar, con mapa interactivo y previews comparables de España y Mestalla. OpenFreeMap se puede probar sin cuenta ni clave; las opciones de Stadia funcionan sin clave en localhost y requieren configuración y respetar su cuota gratuita al publicar. El visor de investigación carga MapLibre desde un CDN versionado; no sustituye Leaflet en el mapa público. Condiciones, fuentes y evaluación: [MAP_STYLE_OPTIONS](docs/MAP_STYLE_OPTIONS.md).
+
+## Copiar producción al entorno local de pruebas
+
+`npm run db:copy-production` exporta los esquemas de aplicación `public` y `drizzle` desde una instantánea de producción de solo lectura y los restaura en una **base nueva** del servidor de `TEST_DATABASE_URL`. Conserva la base de pruebas anterior, verifica los recuentos de todas las tablas y solo entonces actualiza `TEST_DATABASE_URL` en `.env.local`. Reinicia `npm run dev:testing` para usarla. La configuración anterior queda en `.env.local.before-production-copy-*` (ignorada por Git); restaurarla permite volver a la base anterior sin borrar ninguna base.
+
+Requiere los clientes compatibles `pg_dump` y `pg_restore`, permiso `CREATEDB` en testing y las variables `NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_PRODUCTION_BRANCH_ID`, `PRODUCTION_DATABASE_NAME` y `PRODUCTION_DATABASE_HOST` en `.env.local`. `PRODUCTION_DATABASE_ROLE` es opcional y usa por defecto el rol de testing. Si los clientes no están en PATH, configura `PG_BIN_DIR` (por ejemplo, `/opt/homebrew/opt/libpq/bin`). La URI de producción se obtiene en memoria mediante la [API de Neon](https://api-docs.neon.tech/reference/getconnectionuri) y se comprueba contra el host y la base configurados; las conexiones de desarrollo/testing deben usar otro host.
+
+No copia sesiones/usuarios de Neon Auth, archivos de los buckets ni trabajos pendientes de eliminación de archivos. Las referencias a escudos se conservan, pero sus imágenes requieren una copia de almacenamiento aparte. Un fallo no activa la copia ni borra bases automáticamente; el mensaje identifica únicamente la nueva base que pudiera haber creado. No modifica producción ni ejecuta migraciones allí.

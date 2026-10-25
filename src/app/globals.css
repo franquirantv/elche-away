@@ -286,3 +286,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
   .explorer .explorer-panel { animation: none; }
   .explorer .map-action, .explorer .trip-card, .explorer .explorer-close, .explorer .explorer-expand, .explorer .map-controls button { transition: none; transform: none; }
 }
+
+.list-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
+.paged-review-items { display: grid; gap: 20px; }

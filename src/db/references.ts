@@ -5,17 +5,19 @@ import { ELCHE_CLUB_ID } from "../lib/identity";
 import { availableSlug } from "../lib/slugs";
 import { InvalidReference, validId, validateReference, type ReferenceKind, type ReferenceValues } from "../server/reference-input";
 
+import { PAGE_SIZE, pageOffset } from "../lib/pagination";
+
 type ReferenceDatabase = Pick<Database, "select" | "insert" | "update" | "delete">;
 
 // Database helpers are not endpoints. Their only application caller is the
 // server-only admin boundary, which verifies authorization on every operation.
-export async function readReferences(db: ReferenceDatabase) {
+export async function readReferences(db: ReferenceDatabase, window?: { kind: ReferenceKind; page: number }) {
   // Sequential reads also work inside a single PostgreSQL test transaction.
-  const clubRows = await db.select().from(clubs).orderBy(clubs.name);
-  const stadiumRows = await db.select().from(stadiums).orderBy(stadiums.name);
-  const competitionRows = await db.select().from(competitions).orderBy(competitions.name);
-  const tierRows = await db.select().from(tiers).orderBy(tiers.level, tiers.name);
-  const seasonRows = await db.select().from(seasons).orderBy(seasons.startYear, seasons.label);
+  const clubRows = await db.select().from(clubs).orderBy(clubs.name, clubs.id).limit(window ? (window.kind === "clubs" ? PAGE_SIZE + 1 : 0) : 2147483647).offset(window?.kind === "clubs" ? pageOffset(window.page) : 0);
+  const stadiumRows = await db.select().from(stadiums).orderBy(stadiums.name, stadiums.id).limit(window ? (window.kind === "stadiums" ? PAGE_SIZE + 1 : 0) : 2147483647).offset(window?.kind === "stadiums" ? pageOffset(window.page) : 0);
+  const competitionRows = await db.select().from(competitions).orderBy(competitions.name, competitions.id).limit(window ? (window.kind === "competitions" ? PAGE_SIZE + 1 : 0) : 2147483647).offset(window?.kind === "competitions" ? pageOffset(window.page) : 0);
+  const tierRows = await db.select().from(tiers).orderBy(tiers.level, tiers.name, tiers.id).limit(window ? (window.kind === "tiers" ? PAGE_SIZE + 1 : window.kind === "seasons" ? 2147483647 : 0) : 2147483647).offset(window?.kind === "tiers" ? pageOffset(window.page) : 0);
+  const seasonRows = await db.select().from(seasons).orderBy(seasons.startYear, seasons.label, seasons.id).limit(window ? (window.kind === "seasons" ? PAGE_SIZE + 1 : 0) : 2147483647).offset(window?.kind === "seasons" ? pageOffset(window.page) : 0);
   return { clubs: clubRows, stadiums: stadiumRows, competitions: competitionRows, tiers: tierRows, seasons: seasonRows };
 }
 

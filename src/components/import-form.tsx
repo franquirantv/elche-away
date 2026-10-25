@@ -1,4 +1,5 @@
 "use client";
+import { PagedReview } from "./paged-review";
 import { useActionState, useState } from "react";
 import { importFixtures } from "@/app/admin/import-actions";
 import { importCategoryLabels, type ImportState } from "@/server/import-types";
@@ -43,12 +44,12 @@ export function ImportForm({ references }: { references: References }) {
       <input type="hidden" name="input" value={JSON.stringify(input)} />
       <h2>2. Asignar referencias y revisar decisiones</h2>
       <p>Los nombres solo se vinculan a las referencias que elijas. Si falta una, créala en administración y vuelve a cargar el archivo.</p>
-      {state.names.map((name, i) => <label className="admin-field" key={name}><span>{name}</span><select name={`club-${i}`} required defaultValue={input.mappings[name] ?? ""}><option value="">Seleccionar club local</option>{references.clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label>)}
+      <PagedReview key={JSON.stringify(input.mappings)} label="Referencias de importación" items={state.names.map((name, i) => ({ key: name, fields: { [`club-${i}`]: input.mappings[name] ?? "" }, content: <label className="admin-field" key={name}><span>{name}</span><select name={`club-${i}`} required defaultValue={input.mappings[name] ?? ""}><option value="">Seleccionar club local</option>{references.clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label> }))} />
       {preview && <>
         <h3>Preview: {preview.seasonLabel} · {preview.competitionLabel}</h3>
         <p>Partidos {preview.offset + 1}–{preview.offset + preview.rows.length} de {preview.total} encontrados para Elche en este archivo. Este recuento no acredita una temporada completa.</p>
         <p>Las decisiones que cambies abajo requieren generar y revisar un nuevo preview antes de aplicar. Los registros reconocidos conservan su vínculo histórico.</p>
-        {preview.rows.map((row, i) => <fieldset key={row.fingerprint} className="admin-card">
+        <PagedReview key={state.token ?? JSON.stringify(preview.rows.map((row) => row.target))} label="Partidos de importación" items={preview.rows.map((row, i) => ({ key: row.fingerprint, fields: { [`target-${i}`]: row.target }, content: <fieldset key={row.fingerprint} className="admin-card">
           <legend>{row.label}</legend><p><strong>{importCategoryLabels[row.category]}</strong></p>
           <p>Origen: {input.repository} · {input.path} · {input.revision}</p>
           <p>Datos del archivo: {row.incoming.homeScore ?? "?"} – {row.incoming.awayScore ?? "?"} · {display("status", row.incoming.status)} · {row.incoming.phase ?? "Fase desconocida"}</p>
@@ -61,7 +62,7 @@ export function ImportForm({ references }: { references: References }) {
           {row.existing && <p>Partido local vinculado: {row.target}. {row.category === "protected" ? "Todos sus hechos se conservarán; solo se registra la procedencia." : "Los campos ausentes no borran datos locales."}</p>}
           {row.changes.length > 0 && <ul>{row.changes.map((key) => <li key={key}>{fieldLabels[key]}: {display(key, row.existing![key as keyof typeof row.existing])} → {display(key, row.proposed[key as keyof typeof row.proposed])}{row.category === "protected" ? " (protegido; no se aplicará)" : ""}</li>)}</ul>}
           {!row.target && <p className="form-error">Elige vincular, crear u omitir y genera otro preview.</p>}
-        </fieldset>)}
+        </fieldset> }))} />
       </>}
       <button className="button-link" name="intent" value="preview" disabled={pending}>{preview ? "Actualizar preview con estas decisiones" : "Generar preview"}</button>
     </form>}

@@ -1,3 +1,5 @@
+import { Pagination } from "./pagination";
+import { PAGE_SIZE, pageNumber } from "@/lib/pagination";
 import Link from "next/link";
 import { getAdminFixtures } from "@/server/fixtures";
 import type { readReferences } from "@/db/references";
@@ -8,10 +10,10 @@ import { InvalidReference } from "@/server/reference-input";
 
 export async function FixtureBrowser({ references, filters }: {
   references: Awaited<ReturnType<typeof readReferences>>;
-  filters: { seasonId?: string; competitionId?: string };
+  filters: { seasonId?: string; competitionId?: string; page?: string };
 }) {
   let rows;
-  try { rows = await getAdminFixtures(filters); }
+  try { rows = await getAdminFixtures({ ...filters, page: pageNumber(filters.page) }); }
   catch (error) { if (!(error instanceof InvalidReference)) throw error; return <p role="alert">Filtro no válido. <Link href="/admin">Volver a todos los partidos</Link></p>; }
   const clubName = (id: string | null) => references.clubs.find((club) => club.id === id)?.name ?? "Club desconocido";
   return <>
@@ -23,7 +25,7 @@ export async function FixtureBrowser({ references, filters }: {
     </form>
     <details className="admin-card"><summary>Añadir partido</summary><FixtureForm options={references} /></details>
     <section className="admin-records" aria-label="Partidos existentes">
-      {rows.map(({ fixture, personal }) => {
+      {rows.slice(0, PAGE_SIZE).map(({ fixture, personal }) => {
         const season = references.seasons.find((item) => item.id === fixture.seasonId);
         return <article key={fixture.id} className="admin-card">
           <h3>{clubName(fixture.homeClubId)} – {clubName(fixture.awayClubId)}</h3>
@@ -38,5 +40,6 @@ export async function FixtureBrowser({ references, filters }: {
       })}
       {!rows.length && <p>No hay partidos locales para estos filtros. Puedes añadir un partido manualmente.</p>}
     </section>
+    <Pagination page={pageNumber(filters.page)} hasMore={rows.length > PAGE_SIZE} params={filters} />
   </>;
 }
