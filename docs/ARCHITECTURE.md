@@ -1,5 +1,9 @@
 # Proposed architecture
 
+## GEO-02 / COL-01 / COL-02 · Criterio vigente
+
+El propietario autorizó el 2026-10-25 publicar todos los estadios registrados como catálogo dinámico del reto, incluidos pendientes. Esta excepción sustituye las limitaciones anteriores de este documento sobre la colección de estadios exclusivamente visitados; el mapa conserva únicamente marcadores con asistencia; los partidos sin asistencia siguen privados. Las visitas, los escudos y las estadísticas personales continúan derivados de asistencias. Filtros de colección y criterio territorial (50 provincias, 17 comunidades, islas incluidas, Ceuta/Melilla aparte, sin kilómetros) se documentan en [PRODUCT](PRODUCT.md#geo-02--col-01--col-02--criterio-vigente). No requiere migración ni servicios nuevos.
+
 Production delivery: [CD](CD.md) defines the owner-authorized automatic recovery → migration → Vercel deployment → smoke pipeline, initially disabled pending external configuration. GitHub Actions is the sole Production deployer; Vercel Git integration retains Preview only (`main` auto-deploy is disabled in `vercel.json`). Application builds do not run migrations. PostgreSQL recovery branches remain isolated from development, testing and Preview.
 
 Status: Foundation is implemented with Next.js, React, strict TypeScript and Tailwind; Milestone 2 adds PostgreSQL/Drizzle read-only trips and stadiums; Milestone 3 auth/reference editing is complete; Milestone 4a adds local fixture and attendance administration; Milestone 4c adds explicit static-file imports; deployment remains planned. Product scope lives in PRODUCT; relational rules live in DATABASE. The owner configured nonproduction Neon development/testing branches; no production or deployment has been provisioned.

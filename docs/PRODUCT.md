@@ -1,5 +1,13 @@
 # Product
 
+## GEO-02 / COL-01 / COL-02 · Criterio vigente
+
+Decisión del propietario (2026-10-25): el catálogo público del reto incluye **todos los estadios registrados**, también sin partidos ni asistencias. Su denominador es dinámico: los estadios presentes en PostgreSQL en la consulta, sin afirmar exhaustividad mundial ni una temporada de referencia. El propietario lo mantiene con el editor de estadios existente; crear/editar un estadio publica su nombre, ubicación y coordenadas. No hace falta migración. Esta es una excepción explícita a las reglas anteriores que limitaban todos los estadios públicos a los visitados: los partidos sin asistencia siguen siendo privados.
+
+El estado visitado y el número de visitas se derivan únicamente de asistencias; visitas repetidas no duplican estadios. El mapa muestra únicamente estadios con asistencia; los pendientes permanecen en la colección y sus paneles, sin marcador. Los estados se distinguen mediante símbolos y texto, además del color. El panel Estadios permite filtrar con `/?view=stadiums&state=all|visited|pending`; la paginación conserva el filtro y el mapa mantiene todos los estadios visitados. Los detalles pendientes tienen URL estable y no muestran partidos sin asistencia. Los estadios sin coordenadas siguen en la lista.
+
+Resumen muestra provincias visitadas sobre 50 y comunidades autónomas sobre 17, incluyendo Baleares y Canarias; Ceuta y Melilla se muestran aparte. Se cuenta un territorio por al menos un estadio con asistencia y código provincial conocido, nunca por club, coordenadas inferidas o superficie. Se muestran cobertura por estadios visitados y territorios pendientes. No hay kilómetros (GEO-01 pendiente) ni polígonos.
+
 ## Purpose and terminology
 
 Elche Away is the detailed personal archive behind a physical cork map of Spain. Visitors explore the owner's football history; only the owner edits it. A future QR code can point to the stable home URL. The product name is **Elche Away**, the primary public tagline is **“Donde tú vayas.”**, and public copy and date formatting are Spanish. This is a personal fan archive, not an official Elche CF product.
@@ -19,8 +27,8 @@ Visitors see a summary, browse trips, open trip details, explore a map, and open
 
 - Home: a full-viewport map application with floating controls and panels for trips, stadiums and the existing summary (total trips, unique known stadiums, W/D/L from known results and coverage). All public interaction takes place over the map, with no page header, navbar, footer or content below. Panels have shareable URLs; legacy archive URLs open the corresponding map content. Admin and sign-in retain the conventional document layout. See [MAP_EXPERIENCE](MAP_EXPERIENCE.md) for the owner-approved UX-01/02/03 direction.
 - Trips: chronology and details with known season, date, competition, opponent, home/away teams, score, venue/location, public notes and a subtle special-match distinction.
-- Stadiums: visited collection and detail with location and associated visits. Historical participants do not imply current tenancy.
-- Map: markers for visited venues with coordinates, opening venue/visit information. Equivalent list navigation remains available.
+- Stadiums: all registered venues, with visited/pending filters, location and attended visits. Historical participants do not imply current tenancy.
+- Map: markers for attended venues with coordinates, opening venue/visit information. Equivalent list navigation remains available.
 - Admin: single-owner access; browse/filter fixture history, mark/unmark attendance, edit personal notes/special status, create/correct missing fixtures, and manage clubs/stadiums plus season/competition/tier references. Explicit import and repeat-sync actions follow provider selection. Confirm destructive actions and warn about plausible duplicates.
 - Special match: one boolean, default false; notes explain significance.
 

@@ -49,9 +49,9 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
         for (const stadium of stadiums) {
           if (stadium.latitude === null || stadium.longitude === null) continue;
           const marker = L.marker([stadium.latitude, stadium.longitude], {
-            title: stadium.crestClubName ? `${stadium.name} · Rival de las visitas: ${stadium.crestClubName}` : stadium.name,
+            title: `${stadium.name} · ${stadium.visits ? `Visitado · ${stadium.visits} visitas` : "Pendiente de visitar"}` + (stadium.crestClubName ? ` · Rival de las visitas: ${stadium.crestClubName}` : ""),
             alt: stadium.name,
-            icon: L.divIcon({ className: "stadium-marker", html: createStadiumBadge(stadium.crestPath), iconSize: [48, 56], iconAnchor: [24, 56] }),
+            icon: L.divIcon({ className: `stadium-marker ${stadium.visits ? "is-visited" : "is-pending"}`, html: createStadiumBadge(stadium.crestPath, stadium.visits), iconSize: [48, 56], iconAnchor: [24, 56] }),
           }).addTo(instance);
           marker.on("mouseover", () => setHoveredSlug(stadium.slug));
           marker.on("mouseout", () => setHoveredSlug(null));
@@ -94,7 +94,7 @@ export function StadiumMap({ stadiums, config, selectedSlug, onStadiumSelect, on
               .setLatLng(marker.getLatLng()).setContent(list).openOn(instance);
             list.querySelector("a")?.focus({ preventScroll: true });
           });
-          marker.getElement()?.setAttribute("aria-label", stadium.crestClubName ? `${stadium.name}. Rival de las visitas: ${stadium.crestClubName}` : stadium.name);
+          marker.getElement()?.setAttribute("aria-label", `${stadium.name}. ${stadium.visits ? `Visitado, ${stadium.visits} visitas` : "Pendiente de visitar"}${stadium.crestClubName ? `. Rival de las visitas: ${stadium.crestClubName}` : ""}`);
           marker.getElement()?.setAttribute("aria-pressed", "false");
           currentMarkers.set(stadium.slug, marker);
         }

@@ -31,6 +31,7 @@ export function ReferenceForm({ kind, record, tierOptions, protectedClub = false
     {kind === "tiers" && input("level", "Nivel en la pirámide", "number", true)}
     {kind === "clubs" && !record && <p className="admin-hint">Guarda primero el club para poder subir su escudo.</p>}
     {kind === "stadiums" && <>
+      <p className="admin-hint">Todos los estadios registrados forman parte de la colección pública, aunque no tengan visitas. El nombre, la ubicación y las coordenadas serán públicos.</p>
       {input("city", "Ciudad (opcional)")}
       <label className="admin-field" htmlFor={`${prefix}-province`}><span>Provincia (opcional)</span><select id={`${prefix}-province`} name="provinceCode" defaultValue={field("provinceCode")} aria-invalid={Boolean(state.errors?.provinceCode)}><option value="">Desconocida</option>{Object.entries(provinces).sort((a, b) => a[1].name.localeCompare(b[1].name, "es")).map(([code, province]) => <option key={code} value={code}>{province.name}</option>)}</select>{state.errors?.provinceCode && <span className="form-error">{state.errors.provinceCode}</span>}</label>
       {input("latitude", "Latitud (opcional)", "number")}{input("longitude", "Longitud (opcional)", "number")}

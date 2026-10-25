@@ -294,3 +294,25 @@ button:disabled { opacity: 0.6; cursor: wait; }
 
 .list-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
 .paged-review-items { display: grid; gap: 20px; }
+
+/* Collection states retain symbols/text alongside colour. */
+.stadium-marker.is-pending .stadium-badge { border-style: dashed; border-color: #66645c; color: #66645c; background: #fffdf6; }
+.stadium-marker.is-pending .stadium-badge::after { border-top-color: #66645c; }
+.stadium-badge-state { position: absolute; top: -9px; right: -12px; min-width: 23px; padding: 3px; border-radius: 10px; background: #193e30; color: white; font: 700 11px/1.2 Arial, sans-serif; }
+.stadium-marker.is-pending .stadium-badge-state { background: #66645c; }
+.stadium-marker.is-selected .stadium-badge { border-style: solid; border-color: #70421c; }
+.collection-state { font-weight: 600; }
+.territorial-summary { padding-block: 1rem; border-bottom: 1px dashed #8c9c8e; }
+.territorial-summary > div { margin-block: 1.25rem; padding: 1rem; border: 1px solid #dce3d8; border-radius: .75rem; background: #ffffff80; }
+.territorial-summary > div > p { margin: 0 0 .75rem; font-size: .9rem; line-height: 1.5; color: #193e30; font-variant-numeric: tabular-nums; }
+.territorial-summary progress { display: block; appearance: none; -webkit-appearance: none; width: 100%; height: .625rem; overflow: hidden; border: 0; border-radius: 999px; background: #e5e9df; color: #155d43; accent-color: #155d43; }
+.territorial-summary progress::-webkit-progress-bar { border-radius: 999px; background: #e5e9df; box-shadow: inset 0 1px 2px #193e3010; }
+.territorial-summary progress::-webkit-progress-value { border-radius: 999px; background: linear-gradient(90deg, #155d43, #388567); }
+.territorial-summary progress::-moz-progress-bar { border-radius: 999px; background: linear-gradient(90deg, #155d43, #388567); }
+.territorial-summary > div > details { margin-top: .65rem; font-size: .8125rem; line-height: 1.5; }
+.territorial-summary > div > details > summary { padding-block: .375rem; color: #476454; cursor: pointer; }
+.territorial-summary > div > details[open] > summary { color: #193e30; }
+@media (forced-colors: active) { .territorial-summary progress { appearance: auto; -webkit-appearance: auto; } }
+.territory-list { padding-left: 1.2rem; }
+.collection-filters a { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem .65rem; border: 1px solid #a4afa5; border-radius: .4rem; }
+.collection-filters a[aria-current="page"] { background: #193e30; color: white; font-weight: 700; text-decoration: underline; text-underline-offset: .2em; }

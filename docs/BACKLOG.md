@@ -4,6 +4,8 @@ Propuestas para la siguiente fase de Elche Away. Este documento organiza oportun
 
 La experiencia pública ya se articula alrededor de un mapa a pantalla completa, con paneles y URLs compartibles; el admin conserva su estructura actual. Este backlog recoge trabajo pendiente y, de forma explícita, implementaciones locales aún pendientes de revisión. Revisión completa realizada el 2026-10-25 contra el código de `main` y la rama `feature/vis-01-vis-02`.
 
+GEO-02 (sin kilómetros, dependientes de GEO-01) y COL-01/02 están implementados en `feature/geo-02-stadium-collection`, pendientes de revisión e integración. El propietario ha autorizado todos los estadios registrados como catálogo público dinámico y el criterio territorial de 50 provincias, 17 comunidades y ciudades autónomas aparte. Las descripciones originales siguientes se conservan como contexto; sus decisiones quedan resueltas en PRODUCT.
+
 Trabajo implementado retirado de la lista de tareas:
 
 - **UX-01/02/03:** navegación y paneles públicos sobre el mapa, integrados en `main` mediante la [PR #9](https://github.com/franquirantv/elche-away/pull/9). Contrato y comprobaciones en [MAP_EXPERIENCE](MAP_EXPERIENCE.md).

@@ -58,3 +58,20 @@ export function formatLocation(city: string | null, provinceCode: string | null)
   const province = provinceCode ? provinces[provinceCode] : undefined;
   return [city, province?.name, province?.community].filter(Boolean).join(" · ") || "Ubicación desconocida";
 }
+
+// A venue visit establishes presence in a territory, never its area travelled.
+export function territorialProgress(stadiums: { visits: number; provinceCode: string | null }[]) {
+  const visited = stadiums.filter((stadium) => stadium.visits > 0);
+  const known = visited.filter((stadium) => stadium.provinceCode !== null && provinces[stadium.provinceCode]);
+  const codes = new Set(known.map((stadium) => stadium.provinceCode));
+  const entries = Object.entries(provinces);
+  const provincial = entries.filter(([code]) => code !== "51" && code !== "52");
+  const communities = [...new Set(provincial.map(([, province]) => province.community))].sort((a, b) => a.localeCompare(b, "es"));
+  const visitedCommunities = new Set(known.filter((stadium) => stadium.provinceCode !== "51" && stadium.provinceCode !== "52").map((stadium) => provinces[stadium.provinceCode ?? ""].community));
+  return {
+    knownStadiums: known.length, visitedStadiums: visited.length,
+    provinces: provincial.map(([code, province]) => ({ name: province.name, visited: codes.has(code) })),
+    communities: communities.map((name) => ({ name, visited: visitedCommunities.has(name) })),
+    cities: ["51", "52"].map((code) => ({ name: provinces[code].name, visited: codes.has(code) })),
+  };
+}
