@@ -21,6 +21,7 @@
     "dev:testing": "tsx scripts/dev-testing.ts",
     "storage:check": "node --conditions=react-server --import tsx scripts/storage-check.ts",
     "release:check": "tsx scripts/release-check.ts",
+    "db:copy-production": "tsx scripts/copy-production.ts",
     "db:rehearse-backup": "tsx scripts/backup-rehearsal.ts"
   },
   "dependencies": {

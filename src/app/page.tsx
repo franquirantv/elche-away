@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { MapExplorer } from "@/components/map-explorer";
 import type { MapStadium } from "@/components/stadium-map";
-import { ArchiveLinkStatus } from "@/components/archive-link-status";
-import { TripList } from "@/components/trip-list";
+import { pageNumber } from "@/lib/pagination";
+import { LoadMore } from "@/components/load-more";
+import { loadTrips, loadStadiums } from "@/server/archive-lists";
 import { TripFacts } from "@/components/trip-facts";
-import { getHomeSummary, getTrip, getTrips, getVisitedStadiums } from "@/db/public-archive";
+import { getHomeSummary, getTrip, getVisitedStadiums } from "@/db/public-archive";
 import { crestMediaPath } from "@/lib/crest-key";
 import { formatLocation } from "@/lib/geography";
 import { mapDetailHref, mapSelection } from "@/lib/map-navigation";
@@ -14,7 +15,9 @@ import { matchDate, tripTitle } from "@/lib/trips";
 import { mapConfig } from "@/server/map-config";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const selection = mapSelection(await searchParams);
+  const params = await searchParams;
+  const page = pageNumber(params.page);
+  const selection = mapSelection(params);
   if (selection.kind === "invalid") notFound();
   const stadiums = await getVisitedStadiums();
   const mapStadiums: MapStadium[] = stadiums.map((stadium) => ({ slug: stadium.slug, name: stadium.name, location: formatLocation(stadium.city, stadium.provinceCode), latitude: stadium.latitude, longitude: stadium.longitude, visits: stadium.visits, isSpecial: stadium.isSpecial, crestPath: crestMediaPath(stadium.markerCrestKey), crestClubName: stadium.markerClubName }));
@@ -25,7 +28,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (selection.kind === "stadium") {
     const stadium = stadiums.find((item) => item.slug === selection.slug);
     if (!stadium) notFound();
-    const trips = await getTrips(stadium.id);
+    const initial = await loadTrips(stadium.id, page);
     selectedSlug = stadium.slug;
     title = stadium.name;
     panelKey = `stadium:${stadium.slug}`;
@@ -34,7 +37,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <p>{formatLocation(stadium.city, stadium.provinceCode)}</p>
       <p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"} en el archivo.</p>
       {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas: puedes consultar sus visitas aunque no aparezca en el mapa.</p>}
-      <TripList trips={trips} onMap />
+      <LoadMore key={`${stadium.slug}:${page}`} firstPage={page} baseHref={mapDetailHref("stadium", stadium.slug)} initial={initial} load={loadTrips.bind(null, stadium.id)} />
     </>;
   } else if (selection.kind === "trip") {
     const trip = await getTrip(selection.slug);
@@ -54,14 +57,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     panelKey = selection.view;
     if (selection.view === "trips") {
       title = "Viajes";
-      const trips = await getTrips();
-      panel = <><p>Todos los viajes publicados, también los que todavía no tienen ubicación.</p>{trips.length ? <TripList trips={trips} onMap /> : <p>Todavía no hay viajes publicados.</p>}</>;
+      panel = <><p>Todos los viajes publicados, también los que todavía no tienen ubicación.</p><LoadMore key={`trips:${page}`} firstPage={page} baseHref="/?view=trips" initial={await loadTrips(undefined, page)} load={loadTrips.bind(null, undefined)} /></>;
     } else if (selection.view === "stadiums") {
       title = "Estadios visitados";
-      panel = <>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<ul className="explorer-stadiums">{stadiums.map((stadium) => <li key={stadium.slug} className="trip-card">
-        <h3><Link href={mapDetailHref("stadium", stadium.slug)} scroll={false}>{stadium.name}<ArchiveLinkStatus /></Link></h3><p>{formatLocation(stadium.city, stadium.provinceCode)}</p><p>{stadium.visits} {stadium.visits === 1 ? "visita" : "visitas"}</p>
-        {(stadium.latitude === null || stadium.longitude === null) && <p>Sin coordenadas</p>}
-      </li>)}</ul></>;
+      panel = <>{!stadiums.length && <p>Todavía no hay estadios visitados publicados.</p>}<LoadMore key={`stadiums:${page}`} firstPage={page} baseHref="/?view=stadiums" initial={await loadStadiums(page)} load={loadStadiums} /></>;
     } else {
       title = "El archivo en cifras";
       const summary = await getHomeSummary();

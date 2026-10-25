@@ -4,9 +4,9 @@ import { getDatabase } from "./client";
 import { readHomeSummary, findTrip, findVisitedStadium, listTrips, listVisitedStadiums } from "./queries";
 
 // Request-time reads only: no build-time DB dependency or persistent data cache.
-export async function getTrips(stadiumId?: string) {
+export async function getTrips(stadiumId?: string, window?: { limit: number; offset: number }) {
   await connection();
-  try { return await listTrips(getDatabase(), stadiumId); }
+  try { return await listTrips(getDatabase(), stadiumId, window); }
   catch { throw new Error("No se pudo consultar el archivo. Revisa la conexión a PostgreSQL."); }
 }
 
@@ -16,9 +16,9 @@ export async function getTrip(slug: string) {
   catch { throw new Error("No se pudo consultar el viaje."); }
 }
 
-export async function getVisitedStadiums() {
+export async function getVisitedStadiums(window?: { limit: number; offset: number }) {
   await connection();
-  try { return await listVisitedStadiums(getDatabase()); }
+  try { return await listVisitedStadiums(getDatabase(), window); }
   catch { throw new Error("No se pudieron consultar los estadios."); }
 }
 
